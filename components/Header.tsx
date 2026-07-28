@@ -1,0 +1,274 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useId, useState } from "react";
+import { DiscordPresence } from "@/components/DiscordPresence";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { nav, site } from "@/lib/data";
+
+function formatMenuClock(date: Date) {
+  const day = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(date);
+
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  return `${day} · ${time}`;
+}
+
+function MenuLocation() {
+  const [clock, setClock] = useState("");
+
+  useEffect(() => {
+    function tick() {
+      setClock(formatMenuClock(new Date()));
+    }
+
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/45">
+      <span className="inline-flex items-center gap-1.5">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          className="h-3.5 w-3.5 shrink-0 text-accent-soft"
+          aria-hidden
+        >
+          <path
+            d="M8 1.75c-2.4 0-4.35 1.9-4.35 4.25 0 3.2 4.35 8.25 4.35 8.25s4.35-5.05 4.35-8.25C12.35 3.65 10.4 1.75 8 1.75Z"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx="8"
+            cy="6"
+            r="1.35"
+            stroke="currentColor"
+            strokeWidth="1.25"
+          />
+        </svg>
+        <span>{site.location}</span>
+      </span>
+      {clock ? (
+        <>
+          <span className="text-white/25" aria-hidden>
+            /
+          </span>
+          <time className="tabular-nums text-white/45">{clock}</time>
+        </>
+      ) : null}
+    </p>
+  );
+}
+
+export function Header() {
+  const pathname = usePathname();
+  const menuId = useId();
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 12);
+    }
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const frosted = scrolled && !open;
+
+  return (
+    <header
+      className={`sticky top-0 z-40 pt-[env(safe-area-inset-top)] transition-[background-color,backdrop-filter,border-color,box-shadow] duration-300 ${
+        frosted
+          ? "border-b border-line bg-background/65 shadow-[0_1px_0_rgba(18,22,20,0.04)] backdrop-blur-xl backdrop-saturate-150"
+          : "border-b border-transparent bg-transparent"
+      }`}
+    >
+      <div
+        className={`page-pad mx-auto flex w-full max-w-6xl items-center justify-between gap-3 transition-[padding] duration-300 ${
+          frosted ? "py-2.5 sm:py-3 md:py-3.5" : "py-4 sm:py-5 md:py-8"
+        }`}
+      >
+        <div className="relative z-[60] flex min-w-0 shrink items-center gap-2.5 sm:gap-3">
+          <Link
+            href="/"
+            className={`min-w-0 font-brand text-[13px] font-semibold tracking-tight transition-colors duration-300 hover:opacity-70 sm:text-[15px] md:text-base ${
+              open ? "text-white" : "text-ink"
+            }`}
+          >
+            {site.brand}
+          </Link>
+          <DiscordPresence inverted={open} />
+        </div>
+
+        <div className="relative z-[60] flex shrink-0 items-center gap-3 sm:gap-5 md:gap-7">
+          <ThemeToggle inverted={open} compact={frosted} />
+          <button
+            type="button"
+            className={`group inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-[color,min-height] duration-300 sm:gap-3 sm:text-[13px] ${
+              frosted ? "min-h-9" : "min-h-11"
+            } ${open ? "text-white" : "text-ink"}`}
+            aria-expanded={open}
+            aria-controls={menuId}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="transition-opacity group-hover:opacity-70">
+              {open ? "Close" : "Menu"}
+            </span>
+            <span className="relative h-4 w-4 shrink-0" aria-hidden>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className={`absolute inset-0 h-4 w-4 transition-all duration-300 ${
+                  open ? "scale-75 opacity-0" : "scale-100 opacity-100"
+                }`}
+              >
+                <path
+                  d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"
+                  stroke="currentColor"
+                  strokeWidth="1.25"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className={`absolute inset-0 h-4 w-4 transition-all duration-300 ${
+                  open ? "scale-100 opacity-100" : "scale-75 opacity-0"
+                }`}
+              >
+                <path
+                  d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6"
+                  stroke="currentColor"
+                  strokeWidth="1.25"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        id={menuId}
+        className={`menu-overlay fixed inset-0 z-50 ${open ? "is-open" : ""}`}
+        aria-hidden={!open}
+      >
+        <div className="menu-overlay__panel absolute inset-0 bg-[#0a0e0c]">
+          <div
+            className="pointer-events-none absolute -left-20 top-1/4 h-72 w-72 rounded-full bg-accent/30 blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-glow/20 blur-3xl"
+            aria-hidden
+          />
+        </div>
+
+        <div className="menu-overlay__scroll relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[calc(4.25rem+env(safe-area-inset-top))] sm:px-6 md:px-10 md:pb-8 md:pt-[calc(5.75rem+env(safe-area-inset-top))]">
+          <div className="menu-overlay__meta shrink-0">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
+              Navigation
+            </p>
+          </div>
+
+          <nav
+            className="menu-overlay__nav mt-auto flex flex-col gap-1 pb-8 sm:gap-2 sm:pb-10 md:gap-3 md:pb-14"
+            aria-label="Primary"
+          >
+            {nav.map((item, index) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="menu-overlay__link group flex min-h-12 min-w-0 items-baseline gap-3 sm:gap-4 md:gap-6"
+                  style={{ ["--i" as string]: index }}
+                  tabIndex={open ? 0 : -1}
+                >
+                  <span className="w-7 shrink-0 text-[11px] uppercase tracking-[0.16em] text-white/35 transition-colors group-hover:text-accent-soft sm:w-8">
+                    0{index + 1}
+                  </span>
+                  <span
+                    className={`min-w-0 font-display text-[clamp(2.4rem,11vw,6.5rem)] leading-[0.95] italic transition-colors ${
+                      active
+                        ? "text-accent-soft"
+                        : "text-white group-hover:text-accent-soft"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="menu-overlay__footer flex shrink-0 flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pt-6">
+            <MenuLocation />
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              <a
+                href={`mailto:${site.email}`}
+                className="break-anywhere text-white/70 transition-colors hover:text-white"
+                tabIndex={open ? 0 : -1}
+              >
+                {site.email}
+              </a>
+              <a
+                href={site.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/70 transition-colors hover:text-white"
+                tabIndex={open ? 0 : -1}
+              >
+                LinkedIn
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
