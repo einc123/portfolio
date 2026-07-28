@@ -3,6 +3,7 @@ import { AccentSwapper } from "@/components/AccentSwapper";
 import { LocalClock } from "@/components/LocalClock";
 import { ThemeModeSwapper } from "@/components/ThemeModeSwapper";
 import { nav, site } from "@/lib/data";
+import { buildInfo } from "@/lib/version";
 
 function PinIcon({ className }: { className?: string }) {
   return (
@@ -119,9 +120,29 @@ export function Footer() {
 
       <div className="border-t border-line pb-[env(safe-area-inset-bottom)]">
         <div className="page-pad mx-auto flex w-full max-w-6xl flex-col gap-4 py-5 text-xs text-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} {site.name}
-          </p>
+          <div className="space-y-1.5">
+            <p>
+              © {new Date().getFullYear()} {site.name}
+            </p>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
+              <a
+                href={site.repo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-underline transition-colors hover:text-accent"
+              >
+                v{buildInfo.version}
+              </a>
+              <span className="text-line" aria-hidden>
+                ·
+              </span>
+              <span>Next.js {buildInfo.next}</span>
+              <span className="text-line" aria-hidden>
+                ·
+              </span>
+              <span>React {buildInfo.react}</span>
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             <ThemeModeSwapper />
             <AccentSwapper />

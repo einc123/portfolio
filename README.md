@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Euan Livingstone — Portfolio
 
-## Getting Started
+Personal portfolio for **Euan Livingstone MBCS** — web designer & developer based in Dunfermline, Scotland.
 
-First, run the development server:
+**Live site:** [euanliv.click](https://euanliv.click)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+A minimalist Next.js portfolio with case studies, booking, theming, and a few playful extras. Open-sourced so others can learn from the structure or fork it as a starting point.
+
+---
+
+## Features
+
+- **Case studies** — project pages with brand colours, SEO copy, and adjacent-project navigation
+- **Booking** — Google Calendar consultation embeds (`/book`)
+- **Contact form** — MailerSend-powered API route
+- **Light / dark mode** — persisted preference with a welcome cue
+- **Accent hues** — random accent each visit (cyan, blue, pink, orange, violet, gold) plus a footer swatch swapper
+- **Motion** — boot intro, typewriter hero, page transitions (respects `prefers-reduced-motion`)
+- **Discord presence** — live status via Lanyard
+- **Local pages** — About, Charity, Dunfermline SEO landing
+- **SEO** — sitemap, robots, JSON-LD, breadcrumbs, Open Graph
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | [Next.js](https://nextjs.org) 16 (App Router) |
+| UI | React 19, TypeScript |
+| Styles | Tailwind CSS 4 |
+| Fonts | Outfit, Instrument Serif, Syne (`next/font`) |
+| Presence | [use-lanyard](https://github.com/alii/use-lanyard) |
+
+## Project structure
+
+```text
+app/                 # Routes (home, work, about, contact, book, charity, dunfermline)
+  api/contact/       # Contact form → MailerSend
+  work/[slug]/       # Case study pages
+components/          # UI (header, footer, intro, theming, booking, …)
+lib/
+  data.ts            # Site copy, projects, nav
+  accent.ts          # Accent colour system
+  theme.ts           # Light / dark
+  caseStudySeo.ts    # Per-project meta
+  caseStudyTheme.ts  # Palette → readable CSS vars
+  seo.ts             # Structured data helpers
+public/projects/     # Case study logos
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Most content lives in `lib/data.ts` — edit projects, about copy, and nav there first.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Getting started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Requirements:** Node.js 20+ recommended.
 
-## Learn More
+```bash
+git clone https://github.com/einc123/portfolio.git
+cd portfolio
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build    # production build
+npm run start    # serve production build
+npm run lint     # ESLint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+Create a `.env.local` for the contact form (optional for local browsing):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+MAILERSEND_API_KEY=your_api_key
+MAILERSEND_FROM_EMAIL=noreply@yourdomain.com
+MAILERSEND_FROM_NAME=Portfolio contact form
+CONTACT_TO_EMAIL=you@yourdomain.com
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Without these, the site still runs; the contact API returns an error if email isn’t configured.
+
+Google Calendar booking URLs live in `lib/data.ts` (`bookingOptions`).
+
+## Customising
+
+1. **Identity** — update `site`, `about`, and `aboutPage` in `lib/data.ts`
+2. **Projects** — add entries to `projects` and logos under `public/projects/`
+3. **SEO for case studies** — extend `lib/caseStudySeo.ts`
+4. **Accents** — palettes in `app/globals.css` (`data-accent="…"`) and `lib/accent.ts`
+5. **Nav** — `nav` array in `lib/data.ts` (header + footer)
+
+## Routes
+
+| Path | Purpose |
+| --- | --- |
+| `/` | Home |
+| `/work` | Case study index |
+| `/work/[slug]` | Individual case study |
+| `/about` | About me |
+| `/contact` | Contact form |
+| `/book` | Book a consultation |
+| `/charity` | Charity & community work |
+| `/dunfermline` | Local Dunfermline / Fife landing |
+
+## Deploy
+
+Built for any Node host that supports Next.js (Vercel, Cloudflare, etc.):
+
+```bash
+npm run build
+npm run start
+```
+
+Point your domain at the deployment and set the MailerSend env vars in the host dashboard.
+
+## Licence
+
+No licence file is included yet — all rights reserved unless otherwise noted. If you fork this for your own portfolio, please replace the personal content, branding, and project case studies with your own.
+
+---
+
+Built by [Euan Livingstone](https://euanliv.click) · [LinkedIn](https://www.linkedin.com/in/euan-livingstone-mbcs-b0b049214/)

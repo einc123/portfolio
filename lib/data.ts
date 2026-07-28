@@ -7,6 +7,7 @@ export const site = {
   location: "Dunfermline, Scotland",
   email: "hello@euanliv.click",
   url: "https://euanliv.click",
+  repo: "https://github.com/einc123/portfolio",
   linkedin: "https://www.linkedin.com/in/euan-livingstone-mbcs-b0b049214/",
   discordId: "344910940401303553",
   address: {
