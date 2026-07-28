@@ -117,7 +117,13 @@ Point your domain at the deployment and set the MailerSend env vars in the host 
 
 ## Licence
 
-No licence file is included yet — all rights reserved unless otherwise noted. If you fork this for your own portfolio, please replace the personal content, branding, and project case studies with your own.
+This project is released under the [Portfolio Attribution License](./LICENSE).
+
+You may use, modify, and redistribute it, including for your own portfolio —
+**provided you credit Euan Livingstone** and link back to
+[euanliv.click](https://euanliv.click) (for example in your site footer and README).
+
+Replace personal content, branding, and case studies with your own when you fork.
 
 ---
 
