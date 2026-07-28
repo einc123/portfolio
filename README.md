@@ -70,18 +70,24 @@ npm run lint     # ESLint
 
 ## Environment variables
 
-Create a `.env.local` for the contact form (optional for local browsing):
+Create a `.env.local` for optional integrations:
 
 ```env
+# Contact form (MailerSend)
 MAILERSEND_API_KEY=your_api_key
 MAILERSEND_FROM_EMAIL=noreply@yourdomain.com
 MAILERSEND_FROM_NAME=Portfolio contact form
 CONTACT_TO_EMAIL=you@yourdomain.com
+
+# Cloudflare Web Analytics (cookieless — no consent toggle)
+NEXT_PUBLIC_CF_BEACON_TOKEN=your_beacon_token
 ```
 
-Without these, the site still runs; the contact API returns an error if email isn’t configured.
+Without MailerSend vars, the site still runs; the contact API returns an error if email isn’t configured.
 
 Google Calendar booking URLs live in `lib/data.ts` (`bookingOptions`).
+
+Cloudflare Web Analytics does not use cookies. You can enable it in the Cloudflare dashboard and/or set `NEXT_PUBLIC_CF_BEACON_TOKEN`; visitors are informed on the cookies policy page, without an analytics opt-in.
 
 ## Customising
 

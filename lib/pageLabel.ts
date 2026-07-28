@@ -3,10 +3,12 @@ import { getProject, nav, site } from "@/lib/data";
 const pageLabels: Record<string, string> = {
   "/": "Home",
   "/work": "Work",
+  "/about": "About",
   "/contact": "Contact",
   "/book": "Book a chat",
   "/dunfermline": "Dunfermline",
   "/charity": "Charity",
+  "/cookies": "Cookies",
 };
 
 export function getPageLabel(pathname: string): string {

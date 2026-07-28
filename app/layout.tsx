@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Outfit, Syne } from "next/font/google";
 import { CodeIntro, introInitScript } from "@/components/CodeIntro";
+import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
+import { CookieConsentBanner } from "@/components/CookieConsent";
 import { CustomCursor } from "@/components/CustomCursor";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -125,6 +127,8 @@ export default function RootLayout({
         <PageTransition />
         <ThemeWelcome />
         <CustomCursor />
+        <CookieConsentBanner />
+        <AnalyticsBeacon />
         <div className="site-shell flex min-h-full flex-col">
           <Header />
           <main className="flex-1">{children}</main>

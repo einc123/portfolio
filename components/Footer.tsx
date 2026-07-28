@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccentSwapper } from "@/components/AccentSwapper";
 import { LocalClock } from "@/components/LocalClock";
+import { ManageCookiesButton } from "@/components/ManageCookiesButton";
 import { ThemeModeSwapper } from "@/components/ThemeModeSwapper";
 import { nav, site } from "@/lib/data";
 import { buildInfo } from "@/lib/version";
@@ -147,7 +148,21 @@ export function Footer() {
             <ThemeModeSwapper />
             <AccentSwapper />
           </div>
-          <p className="sm:text-right">Professional Member of BCS (MBCS)</p>
+          <div className="space-y-1.5 sm:text-right">
+            <p>Professional Member of BCS (MBCS)</p>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:justify-end">
+              <Link
+                href="/cookies"
+                className="link-underline transition-colors hover:text-accent"
+              >
+                Cookies
+              </Link>
+              <span className="text-line" aria-hidden>
+                ·
+              </span>
+              <ManageCookiesButton className="link-underline transition-colors hover:text-accent" />
+            </p>
+          </div>
         </div>
       </div>
     </footer>
