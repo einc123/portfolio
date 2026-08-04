@@ -89,17 +89,21 @@ OpenNext invokes `npm run build` internally, so that script **must** stay as `ne
 
 | Mode | Where | How |
 | --- | --- | --- |
-| `binding` | Production Worker | `env.DB` D1 binding via OpenNext |
-| `remote` | Scripts / fallback | Cloudflare D1 HTTP API |
-| `local` | `next dev` | SQLite file (`.data/euanliv-click.sqlite`) |
+| `binding` | Deployed Worker | `env.DB` via OpenNext (live requests) |
+| `remote` | Scripts / build (optional) | Cloudflare D1 HTTP API |
+| `local` | Plain `next dev` without remote bindings | SQLite file (`.data/euanliv-click.sqlite`) |
 
 `auto` tries **binding → remote (if credentials) → local**. Admin pages show the effective mode under the hero.
 
+In `wrangler.jsonc`, the D1 binding has `"remote": true` so **`next build` / `next dev` talk to the live D1 database**, not an empty local stub. That is *not* the Worker runtime itself — only the same D1 the Worker uses.
+
+After deploy, create tables on that live D1 (Workers Builds can do this with Wrangler’s account auth):
+
 ```bash
-npm run db:migrate:local
-npm run db:migrate:remote
-npm run db:seed-admin          # optional first admin user
-npm run db:seed-case-studies
+npm run db:migrate:d1              # wrangler d1 migrations apply DB --remote
+npm run db:migrate:remote          # same schema via HTTP API (needs API token in .env.local)
+npm run db:seed-case-studies:remote
+npm run db:seed-admin:remote
 ```
 
 ## Environment variables
@@ -186,7 +190,7 @@ Set **both** of these in Cloudflare → Worker → Settings → Builds:
 | Setting | Value |
 | --- | --- |
 | **Build command** | `npx opennextjs-cloudflare build` |
-| **Deploy command** | `npx wrangler deploy` |
+| **Deploy command** | `npx wrangler d1 migrations apply DB --remote && npx wrangler deploy` |
 
 Alternative if you prefer to keep build as `npm run build`:
 
@@ -195,16 +199,11 @@ Alternative if you prefer to keep build as `npm run build`:
 | **Build command** | `npm run build` |
 | **Deploy command** | `npm run deploy` |
 
-(`npm run deploy` runs OpenNext build + deploy itself.)
+(`npm run deploy` runs D1 migrations, OpenNext build, then deploy.)
 
 Keep `"build": "next build"` in `package.json`. OpenNext calls that internally — pointing `build` at `opennextjs-cloudflare build` causes an infinite loop.
 
-After a successful deploy, run remote D1 migrations if tables are missing (`organisation_case_studies` etc.):
-
-```bash
-npm run db:migrate:remote
-npm run db:seed-case-studies:remote   # optional
-```
+After a successful deploy, seed data if needed (`npm run db:seed-case-studies:remote`). Migrations should already run via the deploy command above.
 
 Then confirm `https://your-domain/sitemap.xml` returns XML and resubmit it in Google Search Console. If crawlers fail intermittently, check Cloudflare **Bot Fight Mode**.
 

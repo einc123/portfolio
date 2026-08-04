@@ -39,7 +39,9 @@
       "binding": "DB",
       "database_name": "euanliv-click",
       "database_id": "df8d7356-f8ff-45d0-90db-7378540e0273",
-      "migrations_dir": "migrations"
+      "migrations_dir": "migrations",
+      // Use the live D1 database during `next dev` / OpenNext build (not an empty local stub).
+      "remote": true
     }
   ],
   "observability": {
