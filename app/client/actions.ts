@@ -30,6 +30,7 @@ import {
   setPasswordResetToken,
   setUserAdminFlag,
   setUserTotp,
+  updateUserAppearancePreferences,
   updateUserBillingDetails,
   updateUserByAdmin,
   updateUserProfileName,
@@ -92,6 +93,8 @@ import {
   resolveHostingUrl,
   type UnmanagedProvider,
 } from "@/lib/hosting";
+import { isAccent } from "@/lib/accent";
+import { isTheme } from "@/lib/theme";
 
 export type ActionState = {
   ok?: boolean;
@@ -100,7 +103,23 @@ export type ActionState = {
   needs2fa?: boolean;
   needsOrgSelect?: boolean;
   needsBilling?: boolean;
+  preferredTheme?: "light" | "dark" | null;
+  preferredAccent?: string | null;
 };
+
+function appearanceFromUser(user: {
+  preferred_theme?: string | null;
+  preferred_accent?: string | null;
+}): Pick<ActionState, "preferredTheme" | "preferredAccent"> {
+  return {
+    preferredTheme: isTheme(user.preferred_theme ?? null)
+      ? user.preferred_theme
+      : null,
+    preferredAccent: isAccent(user.preferred_accent ?? null)
+      ? user.preferred_accent
+      : null,
+  };
+}
 
 async function destinationAfterAuth(userId: number): Promise<{
   needsBilling?: boolean;
@@ -118,7 +137,15 @@ async function establishAfterAuth(user: {
   full_name: string | null;
   is_admin: number;
   totp_enabled: number;
+  preferred_theme?: string | null;
+  preferred_accent?: string | null;
 }): Promise<ActionState> {
+  const full =
+    user.preferred_theme !== undefined
+      ? user
+      : ((await findUserById(user.id)) ?? user);
+  const appearance = appearanceFromUser(full);
+
   const orgs = await getUserOrganisations(user.id);
   const base: ClientSession = {
     userId: user.id,
@@ -129,14 +156,63 @@ async function establishAfterAuth(user: {
 
   if (orgs.length === 0) {
     await setSession(base);
-    return { ok: true, error: "No organisation is linked to this account yet." };
+    return {
+      ok: true,
+      error: "No organisation is linked to this account yet.",
+      ...appearance,
+    };
   }
 
   await setSession({
     ...base,
     pendingOrgSelect: true,
   });
-  return { ok: true, needsOrgSelect: true };
+  return { ok: true, needsOrgSelect: true, ...appearance };
+}
+
+export async function getMyAppearancePreferences(): Promise<
+  ActionState & {
+    preferredTheme?: "light" | "dark" | null;
+    preferredAccent?: string | null;
+  }
+> {
+  const session = await readSession();
+  if (!session?.userId || session.pending2fa) {
+    return { ok: false };
+  }
+  const user = await findUserById(session.userId);
+  if (!user) return { ok: false };
+  return { ok: true, ...appearanceFromUser(user) };
+}
+
+export async function saveAppearancePreferences(input: {
+  theme?: string | null;
+  accent?: string | null;
+}): Promise<ActionState> {
+  const session = await readSession();
+  if (!session?.userId || session.pending2fa) {
+    return { ok: false };
+  }
+
+  const theme = isTheme(input.theme ?? null) ? input.theme : null;
+  const accent = isAccent(input.accent ?? null) ? input.accent : null;
+  if (!theme && !accent) return { ok: true };
+
+  try {
+    await updateUserAppearancePreferences(session.userId, {
+      theme,
+      accent,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not save appearance preferences.",
+    };
+  }
+
+  return { ok: true };
 }
 
 export async function loginWithPassword(

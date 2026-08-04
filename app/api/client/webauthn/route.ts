@@ -138,7 +138,15 @@ export async function POST(request: Request) {
         isAdmin: Boolean(user.is_admin),
         pendingOrgSelect: true,
       });
-      return NextResponse.json({ ok: true, redirectTo: "/client/select-org" });
+      return NextResponse.json({
+        ok: true,
+        redirectTo: "/client/select-org",
+        preferredTheme:
+          user.preferred_theme === "light" || user.preferred_theme === "dark"
+            ? user.preferred_theme
+            : null,
+        preferredAccent: user.preferred_accent ?? null,
+      });
     }
 
     if (action === "register-options") {

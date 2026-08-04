@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Outfit, Syne } from "next/font/google";
+import { AccountAppearanceSync } from "@/components/AccountAppearanceSync";
 import { CodeIntro, introInitScript } from "@/components/CodeIntro";
 import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
 import { CookieConsentBanner } from "@/components/CookieConsent";
@@ -126,6 +127,7 @@ export default function RootLayout({
         <CodeIntro />
         <PageTransition />
         <ThemeWelcome />
+        <AccountAppearanceSync />
         <CustomCursor />
         <CookieConsentBanner />
         <AnalyticsBeacon />

@@ -5,11 +5,35 @@ import { useRouter } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 import {
   loginWithPassword,
+  saveAppearancePreferences,
   verifyLogin2fa,
   type ActionState,
 } from "@/app/client/actions";
+import {
+  applyAccountAppearance,
+  readLocalAppearance,
+} from "@/lib/appearanceClient";
 
 const initial: ActionState = {};
+
+async function handlePostLoginAppearance(result: ActionState) {
+  const hasAccount =
+    Boolean(result.preferredTheme) || Boolean(result.preferredAccent);
+  if (hasAccount) {
+    applyAccountAppearance({
+      preferredTheme: result.preferredTheme,
+      preferredAccent: result.preferredAccent,
+    });
+  } else {
+    const local = readLocalAppearance();
+    if (local.theme || local.accent) {
+      await saveAppearancePreferences({
+        theme: local.theme,
+        accent: local.accent,
+      });
+    }
+  }
+}
 
 export function ClientLoginForm({
   initialMode = "password",
@@ -29,6 +53,9 @@ export function ClientLoginForm({
         setMode("2fa");
         return result;
       }
+      if (result.ok) {
+        await handlePostLoginAppearance(result);
+      }
       if (result.needsOrgSelect) {
         router.push("/client/select-org");
         return result;
@@ -44,6 +71,9 @@ export function ClientLoginForm({
   const [twoFaState, twoFaAction, twoFaPending] = useActionState(
     async (prev: ActionState, formData: FormData) => {
       const result = await verifyLogin2fa(prev, formData);
+      if (result.ok) {
+        await handlePostLoginAppearance(result);
+      }
       if (result.needsOrgSelect) {
         router.push("/client/select-org");
         return result;
@@ -90,11 +120,18 @@ export function ClientLoginForm({
         const verifyJson = (await verifyRes.json()) as {
           error?: string;
           redirectTo?: string;
+          preferredTheme?: string | null;
+          preferredAccent?: string | null;
         };
         if (!verifyRes.ok) {
           setPasskeyError(verifyJson.error || "Passkey login failed.");
           return;
         }
+        await handlePostLoginAppearance({
+          ok: true,
+          preferredTheme: verifyJson.preferredTheme as ActionState["preferredTheme"],
+          preferredAccent: verifyJson.preferredAccent,
+        });
         router.push(verifyJson.redirectTo || "/client/dashboard");
       } catch (error) {
         setPasskeyError(

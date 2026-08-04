@@ -25,6 +25,8 @@ export type DbUser = {
   must_reset_password: number;
   password_reset_token: string | null;
   password_reset_expires_at: string | null;
+  preferred_theme: "light" | "dark" | null;
+  preferred_accent: string | null;
 };
 
 export type DbOrganisation = {
@@ -282,9 +284,45 @@ export function slugify(value: string) {
     .slice(0, 180);
 }
 
-export function getDbDriver() {
+export type DbDriverMode = "binding" | "remote" | "local";
+
+export function getDbDriver(): DbDriverMode {
   const driver = configuredDriver();
-  if (driver !== "auto") return driver;
+  if (driver === "binding" || driver === "remote" || driver === "local") {
+    return driver;
+  }
   if (hasRemoteCredentials()) return "remote";
   return "local";
+}
+
+/**
+ * Effective D1 access path for this request — same order as `runQuery`.
+ * Prefer this for admin/status UI; `getDbDriver()` only reflects config/env heuristics.
+ */
+export async function resolveDbDriver(): Promise<{
+  mode: DbDriverMode;
+  configured: Driver;
+}> {
+  const configured = configuredDriver();
+
+  if (configured === "binding") {
+    const binding = await getBindingDb();
+    if (!binding) {
+      throw new Error("D1 binding DB is not available in this runtime.");
+    }
+    return { mode: "binding", configured };
+  }
+
+  if (configured === "remote") {
+    return { mode: "remote", configured };
+  }
+
+  if (configured === "local") {
+    return { mode: "local", configured };
+  }
+
+  const binding = await getBindingDb();
+  if (binding) return { mode: "binding", configured };
+  if (hasRemoteCredentials()) return { mode: "remote", configured };
+  return { mode: "local", configured };
 }

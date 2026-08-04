@@ -45,4 +45,5 @@ next-env.d.ts
 .data/
 .wrangler/
 .dev.vars
+.open-next/
 

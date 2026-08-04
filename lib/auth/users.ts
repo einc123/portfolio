@@ -634,3 +634,47 @@ export async function setUserTotp(
     { id: userId, secret, enabled: enabled ? 1 : 0 },
   );
 }
+
+export async function updateUserAppearancePreferences(
+  userId: number,
+  input: {
+    theme?: "light" | "dark" | null;
+    accent?: string | null;
+  },
+) {
+  const theme =
+    input.theme === "light" || input.theme === "dark" ? input.theme : null;
+  const accent = input.accent?.trim() || null;
+
+  if (theme && accent) {
+    await execute(
+      `UPDATE client_users
+       SET preferred_theme = :theme,
+           preferred_accent = :accent,
+           updated_at = datetime('now')
+       WHERE id = :id`,
+      { id: userId, theme, accent },
+    );
+    return;
+  }
+
+  if (theme) {
+    await execute(
+      `UPDATE client_users
+       SET preferred_theme = :theme,
+           updated_at = datetime('now')
+       WHERE id = :id`,
+      { id: userId, theme },
+    );
+  }
+
+  if (accent) {
+    await execute(
+      `UPDATE client_users
+       SET preferred_accent = :accent,
+           updated_at = datetime('now')
+       WHERE id = :id`,
+      { id: userId, accent },
+    );
+  }
+}
