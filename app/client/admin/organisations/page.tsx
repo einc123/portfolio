@@ -62,6 +62,7 @@ export default async function ClientAdminOrganisationsPage() {
               ? org.unmanaged_provider
               : null,
           hosting_url: org.hosting_url ?? null,
+          website_url: org.website_url ?? null,
           members: org.members,
           hasCaseStudy: withCaseStudy.has(org.id),
         }))}

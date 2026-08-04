@@ -127,6 +127,7 @@ export default async function ClientAdminManageOrganisationPage({
               ? organisation.unmanaged_provider
               : null,
           hosting_url: organisation.hosting_url ?? null,
+          website_url: organisation.website_url ?? null,
           members: organisation.members,
         }}
         users={users.map((person) => ({
