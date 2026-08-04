@@ -153,7 +153,13 @@ async function establishAfterAuth(user: {
   };
 
   if (orgs.length === 0) {
-    await setSession(base);
+    const saved = await setSession(base);
+    if (!saved) {
+      return {
+        error: "Could not start your session. Please try again.",
+        ...appearance,
+      };
+    }
     return {
       ok: true,
       error: "No organisation is linked to this account yet.",
@@ -161,10 +167,16 @@ async function establishAfterAuth(user: {
     };
   }
 
-  await setSession({
+  const saved = await setSession({
     ...base,
     pendingOrgSelect: true,
   });
+  if (!saved) {
+    return {
+      error: "Could not start your session. Please try again.",
+      ...appearance,
+    };
+  }
   return { ok: true, needsOrgSelect: true, ...appearance };
 }
 
@@ -305,32 +317,47 @@ export async function selectOrganisation(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await readSession();
-  if (!session || session.pending2fa) {
-    return { error: "Please sign in again." };
+  try {
+    const session = await readSession();
+    if (!session || session.pending2fa) {
+      return { error: "Please sign in again." };
+    }
+
+    const organisationId = Number(formData.get("organisationId"));
+    if (!Number.isFinite(organisationId) || organisationId <= 0) {
+      return { error: "Choose an organisation." };
+    }
+
+    const org = await getOrganisationMembership(session.userId, organisationId);
+    if (!org) {
+      return { error: "That organisation isn’t available on this account." };
+    }
+
+    const saved = await setSession({
+      userId: session.userId,
+      email: session.email,
+      name: session.name,
+      isAdmin: session.isAdmin,
+      organisationId: Number(org.id),
+      organisationName: org.name,
+    });
+    if (!saved) {
+      return {
+        error: "Could not save your organisation choice. Please try again.",
+      };
+    }
+
+    const dest = await destinationAfterAuth(session.userId);
+    return { ok: true, ...dest };
+  } catch (error) {
+    console.error("selectOrganisation failed", error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not open that organisation.",
+    };
   }
-
-  const organisationId = Number(formData.get("organisationId"));
-  if (!Number.isFinite(organisationId) || organisationId <= 0) {
-    return { error: "Choose an organisation." };
-  }
-
-  const org = await getOrganisationMembership(session.userId, organisationId);
-  if (!org) {
-    return { error: "That organisation isn’t available on this account." };
-  }
-
-  await setSession({
-    userId: session.userId,
-    email: session.email,
-    name: session.name,
-    isAdmin: session.isAdmin,
-    organisationId: Number(org.id),
-    organisationName: org.name,
-  });
-
-  const dest = await destinationAfterAuth(session.userId);
-  return { ok: true, ...dest };
 }
 
 export async function logoutAction() {

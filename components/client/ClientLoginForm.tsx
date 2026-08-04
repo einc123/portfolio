@@ -57,10 +57,12 @@ export function ClientLoginForm({
         await handlePostLoginAppearance(result);
       }
       if (result.needsOrgSelect) {
+        router.refresh();
         router.push("/client/select-org");
         return result;
       }
       if (result.ok) {
+        router.refresh();
         router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
       }
       return result;
@@ -75,10 +77,12 @@ export function ClientLoginForm({
         await handlePostLoginAppearance(result);
       }
       if (result.needsOrgSelect) {
+        router.refresh();
         router.push("/client/select-org");
         return result;
       }
       if (result.ok) {
+        router.refresh();
         router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
       }
       return result;
@@ -132,6 +136,7 @@ export function ClientLoginForm({
           preferredTheme: verifyJson.preferredTheme as ActionState["preferredTheme"],
           preferredAccent: verifyJson.preferredAccent,
         });
+        router.refresh();
         router.push(verifyJson.redirectTo || "/client/dashboard");
       } catch (error) {
         setPasskeyError(

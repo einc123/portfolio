@@ -33,6 +33,7 @@ export function OrgSelectForm({
         setPendingId(null);
         return;
       }
+      router.refresh();
       router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
     });
   }

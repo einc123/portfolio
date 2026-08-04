@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { EncryptJWT, jwtDecrypt } from "jose";
 import { cookies } from "next/headers";
 import { getOrganisationMembership } from "@/lib/auth/users";
+import { getRuntimeEnv } from "@/lib/runtimeEnv";
 
 const COOKIE_NAME = "client_session";
 const CHALLENGE_COOKIE = "webauthn_challenge";
@@ -19,8 +20,10 @@ export type ClientSession = {
   pendingOrgSelect?: boolean;
 };
 
-function secretKey() {
-  const secret = process.env.AUTH_SECRET?.trim();
+async function secretKey() {
+  const secret =
+    (await getRuntimeEnv("AUTH_SECRET"))?.trim() ||
+    process.env.AUTH_SECRET?.trim();
   if (!secret || secret.length < 32) {
     throw new Error("AUTH_SECRET must be set to a long random string (32+ chars).");
   }
@@ -39,7 +42,7 @@ export async function sealSession(payload: ClientSession, maxAgeSec = 60 * 60 * 
     .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
     .setIssuedAt()
     .setExpirationTime(`${maxAgeSec}s`)
-    .encrypt(secretKey());
+    .encrypt(await secretKey());
 }
 
 export async function readSession(): Promise<ClientSession | null> {
@@ -48,7 +51,7 @@ export async function readSession(): Promise<ClientSession | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtDecrypt(token, secretKey());
+    const { payload } = await jwtDecrypt(token, await secretKey());
     if (typeof payload.userId !== "number" || typeof payload.email !== "string") {
       return null;
     }
@@ -73,7 +76,10 @@ export async function readSession(): Promise<ClientSession | null> {
   }
 }
 
-export async function setSession(payload: ClientSession, maxAgeSec = 60 * 60 * 12) {
+export async function setSession(
+  payload: ClientSession,
+  maxAgeSec = 60 * 60 * 12,
+): Promise<boolean> {
   const jar = await cookies();
   const token = await sealSession(payload, maxAgeSec);
   try {
@@ -84,9 +90,13 @@ export async function setSession(payload: ClientSession, maxAgeSec = 60 * 60 * 1
       path: "/",
       maxAge: maxAgeSec,
     });
+    return true;
   } catch (error) {
     // RSC page renders cannot mutate cookies — callers in actions/routes must not hit this.
-    if (isImmutableCookiesError(error)) return;
+    if (isImmutableCookiesError(error)) {
+      console.error("setSession: cookie write blocked outside action/route");
+      return false;
+    }
     throw error;
   }
 }

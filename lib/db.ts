@@ -1,5 +1,6 @@
 import { mkdirSync } from "fs";
 import { dirname, resolve } from "path";
+import { getRuntimeEnv } from "@/lib/runtimeEnv";
 
 export type DbUser = {
   id: number;
@@ -78,12 +79,6 @@ type D1Like = {
 
 type Driver = "auto" | "binding" | "remote" | "local";
 
-function required(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Missing environment variable: ${name}`);
-  return value;
-}
-
 function toSqlValue(value: SqlParams[string]): string | number | null {
   if (value === undefined || value === null) return null;
   if (value instanceof Date) return value.toISOString();
@@ -104,8 +99,14 @@ export function bindNamed(sql: string, params: SqlParams = {}) {
   return { sql: converted, values };
 }
 
-function configuredDriver(): Driver {
-  const mode = (process.env.CLOUDFLARE_D1_MODE || "auto").trim().toLowerCase();
+async function resolveConfiguredDriver(): Promise<Driver> {
+  const mode = (
+    (await getRuntimeEnv("CLOUDFLARE_D1_MODE")) ||
+    process.env.CLOUDFLARE_D1_MODE ||
+    "auto"
+  )
+    .trim()
+    .toLowerCase();
   if (
     mode === "local" ||
     mode === "remote" ||
@@ -117,11 +118,27 @@ function configuredDriver(): Driver {
   return "auto";
 }
 
-function hasRemoteCredentials() {
-  return Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
-      process.env.CLOUDFLARE_API_TOKEN?.trim(),
-  );
+async function resolveRemoteCredentials() {
+  const accountId =
+    (await getRuntimeEnv("CLOUDFLARE_ACCOUNT_ID")) ||
+    process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const token =
+    (await getRuntimeEnv("CLOUDFLARE_API_TOKEN")) ||
+    process.env.CLOUDFLARE_API_TOKEN?.trim();
+  const databaseId =
+    (await getRuntimeEnv("CLOUDFLARE_D1_DATABASE_ID")) ||
+    process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() ||
+    "df8d7356-f8ff-45d0-90db-7378540e0273";
+  return {
+    accountId: accountId?.trim() || "",
+    token: token?.trim() || "",
+    databaseId,
+  };
+}
+
+async function hasRemoteCredentials() {
+  const { accountId, token } = await resolveRemoteCredentials();
+  return Boolean(accountId && token);
 }
 
 /** True on Cloudflare Workers / workerd (never use better-sqlite3 there). */
@@ -190,11 +207,12 @@ async function remoteQuery<T extends Record<string, unknown>>(
   sql: string,
   params: Array<string | number | null>,
 ): Promise<{ results: T[]; meta: { last_row_id: number; changes: number } }> {
-  const accountId = required("CLOUDFLARE_ACCOUNT_ID");
-  const token = required("CLOUDFLARE_API_TOKEN");
-  const databaseId =
-    process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() ||
-    "df8d7356-f8ff-45d0-90db-7378540e0273";
+  const { accountId, token, databaseId } = await resolveRemoteCredentials();
+  if (!accountId || !token) {
+    throw new Error(
+      "Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN (set as Worker secrets for remote mode).",
+    );
+  }
 
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
@@ -274,11 +292,25 @@ async function runQuery<T extends Record<string, unknown>>(
   params: SqlParams = {},
 ): Promise<{ results: T[]; insertId: number; changes: number }> {
   const { sql: statement, values } = bindNamed(sql, params);
-  const driver = configuredDriver();
+  const driver = await resolveConfiguredDriver();
+  const remoteReady = await hasRemoteCredentials();
 
-  // Prefer the Workers D1 binding whenever available — including when
-  // CLOUDFLARE_D1_MODE=remote is set without API credentials (common misconfig).
-  if (driver !== "local") {
+  // Explicit remote mode: use the D1 HTTP API (Worker secrets via getRuntimeEnv).
+  if (driver === "remote") {
+    if (!remoteReady) {
+      throw new Error(
+        "CLOUDFLARE_D1_MODE=remote needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN as Worker secrets.",
+      );
+    }
+    const remote = await remoteQuery<T>(statement, values);
+    return {
+      results: remote.results,
+      insertId: remote.meta.last_row_id,
+      changes: remote.meta.changes,
+    };
+  }
+
+  if (driver === "binding" || driver === "auto") {
     const binding = await getBindingDb();
     if (binding) {
       try {
@@ -292,10 +324,7 @@ async function runQuery<T extends Record<string, unknown>>(
     }
   }
 
-  if (
-    (driver === "remote" || driver === "auto") &&
-    hasRemoteCredentials()
-  ) {
+  if ((driver === "auto" || driver === "remote") && remoteReady) {
     const remote = await remoteQuery<T>(statement, values);
     return {
       results: remote.results,
@@ -304,16 +333,10 @@ async function runQuery<T extends Record<string, unknown>>(
     };
   }
 
-  if (driver === "remote") {
-    throw new Error(
-      "CLOUDFLARE_D1_MODE=remote needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN. On the Worker, remove that mode and use the DB binding instead.",
-    );
-  }
-
   if (driver === "local" || driver === "auto") {
     if (isCloudflareRuntime()) {
       throw new Error(
-        "D1 binding unavailable on Cloudflare Workers (cannot use local SQLite).",
+        "D1 unavailable on Cloudflare Workers (no working binding/remote credentials).",
       );
     }
     return runLocal<T>(statement, values);
@@ -347,23 +370,34 @@ export function slugify(value: string) {
 export type DbDriverMode = "binding" | "remote" | "local";
 
 export function getDbDriver(): DbDriverMode {
-  const driver = configuredDriver();
-  if (driver === "binding" || driver === "remote" || driver === "local") {
-    return driver;
+  const mode = (process.env.CLOUDFLARE_D1_MODE || "auto").trim().toLowerCase();
+  if (mode === "binding" || mode === "remote" || mode === "local") return mode;
+  if (
+    process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
+    process.env.CLOUDFLARE_API_TOKEN?.trim()
+  ) {
+    return "remote";
   }
-  if (hasRemoteCredentials()) return "remote";
   return "local";
 }
 
 /**
  * Effective D1 access path for this request — same order as `runQuery`.
- * Prefer this for admin/status UI; `getDbDriver()` only reflects config/env heuristics.
  */
 export async function resolveDbDriver(): Promise<{
   mode: DbDriverMode;
   configured: Driver;
 }> {
-  const configured = configuredDriver();
+  const configured = await resolveConfiguredDriver();
+
+  if (configured === "remote") {
+    if (!(await hasRemoteCredentials())) {
+      throw new Error(
+        "CLOUDFLARE_D1_MODE=remote needs API credentials (Worker secrets).",
+      );
+    }
+    return { mode: "remote", configured };
+  }
 
   if (configured === "local") {
     return { mode: "local", configured };
@@ -376,13 +410,8 @@ export async function resolveDbDriver(): Promise<{
     throw new Error("D1 binding DB is not available in this runtime.");
   }
 
-  if (configured === "remote" || hasRemoteCredentials()) {
-    if (hasRemoteCredentials()) return { mode: "remote", configured };
-    if (configured === "remote") {
-      throw new Error(
-        "CLOUDFLARE_D1_MODE=remote needs API credentials (or use the DB binding).",
-      );
-    }
+  if (await hasRemoteCredentials()) {
+    return { mode: "remote", configured };
   }
 
   return { mode: "local", configured };

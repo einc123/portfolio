@@ -182,7 +182,11 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
                 }`}
               >
                 <Link
-                  href="/client/dashboard"
+                  href={
+                    account.organisationName === "Choose organisation"
+                      ? "/client/select-org"
+                      : "/client/dashboard"
+                  }
                   onClick={() => setOpen(false)}
                   className="min-w-0 max-w-[7.5rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:max-w-[11rem] sm:text-[12px]"
                   title={account.organisationName}
