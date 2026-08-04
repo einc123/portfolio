@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { charityProjectSlugs } from "@/lib/caseStudySeo";
-import { getProject, site } from "@/lib/data";
+import { listCharityCaseStudies } from "@/lib/caseStudies";
+import { site } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Charity & community work",
@@ -37,15 +39,6 @@ const focusSlugs = [
   "dunfermline-scouts",
 ] as const;
 
-const focusProjects = focusSlugs
-  .map((slug) => getProject(slug))
-  .filter((project): project is NonNullable<typeof project> => Boolean(project));
-
-const moreCharityProjects = charityProjectSlugs
-  .filter((slug) => !(focusSlugs as readonly string[]).includes(slug))
-  .map((slug) => getProject(slug))
-  .filter((project): project is NonNullable<typeof project> => Boolean(project));
-
 const focusNotes: Record<string, string> = {
   "fife-cycle-speedway":
     "A grassroots club running Scotland’s fastest short-track cycling from Broomhead Parks in Dunfermline — riders, results and race-day energy needed a proper home beyond social posts.",
@@ -54,7 +47,14 @@ const focusNotes: Record<string, string> = {
     "District Scouting across Fife — families, volunteers and camping — plus the original large camp that seeded ScoutCamp. One of several Scout charity sites I’ve built locally.",
 };
 
-export default function CharityPage() {
+export default async function CharityPage() {
+  const charityProjects = await listCharityCaseStudies();
+  const focusProjects = focusSlugs
+    .map((slug) => charityProjects.find((project) => project.slug === slug))
+    .filter((project): project is NonNullable<typeof project> => Boolean(project));
+  const moreCharityProjects = charityProjects.filter(
+    (project) => !(focusSlugs as readonly string[]).includes(project.slug),
+  );
   return (
     <>
       <div className="page-pad mx-auto w-full max-w-6xl pt-6 sm:pt-8 md:pt-12">
@@ -72,7 +72,7 @@ export default function CharityPage() {
           Work that serves the community.
         </h1>
         <p className="reveal reveal-delay-2 mt-5 max-w-2xl text-base leading-relaxed text-muted sm:mt-6 md:text-lg">
-          A lot of my practice sits with charities and volunteer-led groups —
+          A lot of my freelance work sits with charities and volunteer-led groups —
           Scout sections, after-school care, grassroots sport. They rarely have
           agency budgets, but they still need sites parents and members can
           trust. I offer charity rates, and I&apos;ve taken on pro bono work
@@ -116,7 +116,7 @@ export default function CharityPage() {
             <p>
               I&apos;ve also done <span className="text-ink">pro bono</span>{" "}
               work where the need is clear and the scope is honest. That
-              doesn&apos;t mean unlimited free agency time; it means agreeing a
+              doesn&apos;t mean unlimited free hours; it means agreeing a
               focused brief and shipping something useful.
             </p>
             <p className="text-sm md:text-base">
@@ -142,7 +142,7 @@ export default function CharityPage() {
               Spotlight
             </p>
             <h2 className="mt-3 font-display text-[clamp(2rem,6vw,3.25rem)] italic leading-[1.05] text-ink">
-              Charity projects that shaped the practice.
+              Charity projects that shaped my work.
             </h2>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function CharityPage() {
           </h2>
           <p className="mt-4 max-w-lg text-band-muted">
             Mention your charity status or community remit when you get in
-            touch so we can talk honestly about discounts, scope and whether
+            touch so I can talk honestly about discounts, scope and whether
             pro bono is a fit.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">

@@ -75,6 +75,30 @@ export function Footer() {
                 Dunfermline
               </Link>
             </li>
+            <li>
+              <Link
+                href="/photography"
+                className="link-underline inline-flex py-1 text-sm text-foreground"
+              >
+                Photography
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/hosting"
+                className="link-underline inline-flex py-1 text-sm text-foreground"
+              >
+                Hosting
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/client/login"
+                className="link-underline inline-flex py-1 text-sm text-foreground"
+              >
+                Client login
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -123,7 +147,8 @@ export function Footer() {
         <div className="page-pad mx-auto flex w-full max-w-6xl flex-col gap-4 py-5 text-xs text-faint sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5">
             <p>
-              © {new Date().getFullYear()} {site.name}
+              © {new Date().getFullYear()} Euan Livingstone Web Design &amp;
+              Development Services
             </p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
               <a

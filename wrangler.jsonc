@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "euanliv-click",
+  "compatibility_date": "2025-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "euanliv-click",
+      "database_id": "df8d7356-f8ff-45d0-90db-7378540e0273",
+      "migrations_dir": "migrations",
+      "preview_database_id": "DB"
+    }
+  ]
+}

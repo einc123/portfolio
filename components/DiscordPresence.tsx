@@ -75,6 +75,10 @@ export function DiscordPresence({ inverted = false }: { inverted?: boolean }) {
   const tip = tooltipCopy(status, device);
   const onMobile = Boolean(status && status !== "offline" && device === "phone");
 
+  if (!status || status === "offline") {
+    return null;
+  }
+
   return (
     <span className="group/status relative z-[70] inline-flex">
       <span

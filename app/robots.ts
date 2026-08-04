@@ -7,10 +7,15 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/"],
+        disallow: ["/api/", "/client/"],
+      },
+      {
+        userAgent: "Googlebot",
+        allow: "/",
+        disallow: ["/api/", "/client/"],
       },
     ],
     sitemap: `${site.url}/sitemap.xml`,
-    host: site.url,
+    host: site.url.replace(/^https?:\/\//, ""),
   };
 }

@@ -33,6 +33,16 @@ const links = [
     note: "Local design & development",
   },
   {
+    href: "/hosting",
+    label: "Hosting",
+    note: "Managed OVH, Spaceship or Verpex",
+  },
+  {
+    href: "/photography",
+    label: "Photography",
+    note: "Stills & licensed drone",
+  },
+  {
     href: "/book",
     label: "Book a chat",
     note: "Pick a time",

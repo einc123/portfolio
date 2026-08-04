@@ -40,8 +40,8 @@ export default function BookPage() {
       <ProcessSteps
         eyebrow="What to expect"
         heading="How a project unfolds."
-        intro="In our consultation we’ll map your goals to a clear process — planning, design, development, changes and launch — so you know exactly what comes next."
-        className="page-pad mx-auto w-full max-w-6xl pb-16 pt-16 sm:pb-20 sm:pt-20 md:pb-28 md:pt-28"
+        intro="In a consultation I’ll map your goals to a clear process — planning, design, development, changes and launch — so you know exactly what comes next."
+        className="page-pad mx-auto w-full max-w-6xl pb-12 pt-12 sm:pb-16 sm:pt-16 md:pb-20 md:pt-20"
       />
     </>
   );

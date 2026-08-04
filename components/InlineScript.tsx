@@ -1,15 +1,29 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+
 /**
  * Inline boot script that runs during HTML parse (before paint).
- * Keep this as a Server Component so the script is present in the initial HTML
- * and actually executes. (A Client Component helper that switched to text/plain
- * left homepage content stuck at opacity 0 when boot never ran.)
+ *
+ * Rendered on the server and during hydration only. After that it returns
+ * null so React 19 / Next 16 don’t warn about client-rendered <script> tags.
+ * By then the IIFE has already run, so theme/accent/intro boot still works.
+ *
  * @see https://nextjs.org/docs/app/guides/preventing-flash-before-hydration
  */
 export function InlineScript({ html }: { html: string }) {
+  const isServerOrHydration = useSyncExternalStore(
+    () => () => {},
+    () => false,
+    () => true,
+  );
+
+  if (!isServerOrHydration) return null;
+
   return (
     <script
-      // Prefer a working boot path over silencing React's script-in-tree warning.
       dangerouslySetInnerHTML={{ __html: html }}
+      suppressHydrationWarning
     />
   );
 }

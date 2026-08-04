@@ -7,6 +7,12 @@ import { DiscordPresence } from "@/components/DiscordPresence";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { nav, site } from "@/lib/data";
 
+export type HeaderAccount = {
+  name: string;
+  organisationName: string;
+  organisationCount: number;
+};
+
 function formatMenuClock(date: Date) {
   const day = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
@@ -75,7 +81,7 @@ function MenuLocation() {
   );
 }
 
-export function Header() {
+export function Header({ account = null }: { account?: HeaderAccount | null }) {
   const pathname = usePathname();
   const menuId = useId();
   const [open, setOpen] = useState(false);
@@ -104,13 +110,28 @@ export function Header() {
   }, [open]);
 
   useEffect(() => {
+    let frame = 0;
+
     function onScroll() {
-      setScrolled(window.scrollY > 12);
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const y = window.scrollY;
+        setScrolled((wasScrolled) => {
+          // Hysteresis stops compact/expand padding from fighting scrollY.
+          if (!wasScrolled && y > 48) return true;
+          if (wasScrolled && y < 8) return false;
+          return wasScrolled;
+        });
+      });
     }
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   const frosted = scrolled && !open;
@@ -124,9 +145,7 @@ export function Header() {
       }`}
     >
       <div
-        className={`page-pad mx-auto flex w-full max-w-6xl items-center justify-between gap-3 transition-[padding] duration-300 ${
-          frosted ? "py-2.5 sm:py-3 md:py-3.5" : "py-4 sm:py-5 md:py-8"
-        }`}
+        className="page-pad mx-auto flex w-full max-w-6xl items-center justify-between gap-3 py-3.5 sm:py-4 md:py-5"
       >
         <div className="relative z-[60] flex min-w-0 shrink items-center gap-2.5 sm:gap-3">
           <Link
@@ -140,13 +159,98 @@ export function Header() {
           <DiscordPresence inverted={open} />
         </div>
 
-        <div className="relative z-[60] flex shrink-0 items-center gap-3 sm:gap-5 md:gap-7">
-          <ThemeToggle inverted={open} compact={frosted} />
+        <div className="relative z-[60] flex shrink-0 items-center gap-2 sm:gap-4 md:gap-6">
+          {account ? (
+            <div className="flex max-w-[min(100vw-11rem,28rem)] items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/client/profile"
+                onClick={() => setOpen(false)}
+                className={`box-border inline-flex h-9 max-w-[9.5rem] items-center truncate border px-2.5 text-[11px] font-medium leading-none tracking-wide transition-colors sm:max-w-[12rem] sm:px-3 sm:text-[12px] ${
+                  open
+                    ? "border-white/25 bg-white/10 text-white hover:bg-white/15"
+                    : "border-line bg-surface text-ink hover:border-accent"
+                }`}
+                title={account.name}
+              >
+                <span className="truncate">{account.name}</span>
+              </Link>
+              <div
+                className={`box-border inline-flex h-9 min-w-0 items-center gap-1.5 border px-2.5 sm:px-3 ${
+                  open
+                    ? "border-white/25 bg-white/10 text-white"
+                    : "border-line bg-surface text-ink"
+                }`}
+              >
+                <Link
+                  href="/client/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="min-w-0 max-w-[7.5rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:max-w-[11rem] sm:text-[12px]"
+                  title={account.organisationName}
+                >
+                  {account.organisationName}
+                </Link>
+                <Link
+                  href="/client/select-org"
+                  onClick={() => setOpen(false)}
+                  className={`inline-flex shrink-0 items-center justify-center transition-opacity hover:opacity-70 ${
+                    open ? "text-white" : "text-ink"
+                  }`}
+                  aria-label="Switch organisation"
+                  title="Switch organisation"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
+                    <path
+                      d="M4.5 5.5 8 2.5l3.5 3M11.5 10.5 8 13.5l-3.5-3"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <Link
+              href="/client/login"
+              className={`group inline-flex min-h-11 items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-opacity duration-300 sm:text-[13px] ${
+                open ? "text-white" : "text-ink"
+              }`}
+              aria-label="Client login"
+              title="Client login"
+              onClick={() => setOpen(false)}
+            >
+              <span className="hidden transition-opacity group-hover:opacity-70 min-[420px]:inline">
+                Client login
+              </span>
+              <span className="transition-opacity group-hover:opacity-70 min-[420px]:hidden">
+                Client
+              </span>
+              <span className="relative h-4 w-4 shrink-0" aria-hidden>
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
+                  <circle
+                    cx="8"
+                    cy="5.5"
+                    r="2.25"
+                    stroke="currentColor"
+                    strokeWidth="1.25"
+                  />
+                  <path
+                    d="M3.5 13.25c.7-2.1 2.3-3.25 4.5-3.25s3.8 1.15 4.5 3.25"
+                    stroke="currentColor"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            </Link>
+          )}
+          <ThemeToggle inverted={open} />
           <button
             type="button"
-            className={`group inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-[color,min-height] duration-300 sm:gap-3 sm:text-[13px] ${
-              frosted ? "min-h-9" : "min-h-11"
-            } ${open ? "text-white" : "text-ink"}`}
+            className={`group inline-flex min-h-11 items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-colors duration-300 sm:gap-3 sm:text-[13px] ${
+              open ? "text-white" : "text-ink"
+            }`}
             aria-expanded={open}
             aria-controls={menuId}
             onClick={() => setOpen((value) => !value)}
@@ -229,14 +333,14 @@ export function Header() {
                   style={{ ["--i" as string]: index }}
                   tabIndex={open ? 0 : -1}
                 >
-                  <span className="w-7 shrink-0 text-[11px] uppercase tracking-[0.16em] text-white/35 transition-colors group-hover:text-accent-soft sm:w-8">
+                  <span className="w-7 shrink-0 text-[11px] uppercase tracking-[0.16em] text-white/35 transition-colors group-hover:text-[var(--menu-active)] sm:w-8">
                     0{index + 1}
                   </span>
                   <span
                     className={`min-w-0 font-display text-[clamp(2.4rem,11vw,6.5rem)] leading-[0.95] italic transition-colors ${
                       active
-                        ? "text-accent-soft"
-                        : "text-white group-hover:text-accent-soft"
+                        ? "text-[var(--menu-active)]"
+                        : "text-white group-hover:text-[var(--menu-active)]"
                     }`}
                   >
                     {item.label}

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: `${site.name} — ${site.title}`,
     short_name: "Euan MBCS",
     description:
-      "Web design and development portfolio by Euan Livingstone MBCS — based in Dunfermline, Scotland.",
+      "Freelance web designer and developer in Dunfermline — portfolio by Euan Livingstone MBCS.",
     start_url: "/",
     display: "standalone",
     background_color: "#f4f6f5",

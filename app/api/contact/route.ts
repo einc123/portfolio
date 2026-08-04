@@ -1,4 +1,5 @@
 import { site } from "@/lib/data";
+import { getRuntimeEnv } from "@/lib/runtimeEnv";
 
 type ContactBody = {
   name?: unknown;
@@ -23,11 +24,11 @@ function escapeHtml(value: string) {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.MAILERSEND_API_KEY;
-  const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+  const apiKey = await getRuntimeEnv("MAILERSEND_API_KEY");
+  const fromEmail = await getRuntimeEnv("MAILERSEND_FROM_EMAIL");
   const fromName =
-    process.env.MAILERSEND_FROM_NAME?.trim() || "Portfolio contact form";
-  const toEmail = process.env.CONTACT_TO_EMAIL?.trim() || site.email;
+    (await getRuntimeEnv("MAILERSEND_FROM_NAME")) || "Portfolio contact form";
+  const toEmail = (await getRuntimeEnv("CONTACT_TO_EMAIL")) || site.email;
 
   if (!apiKey || !fromEmail) {
     return Response.json(

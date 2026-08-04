@@ -61,9 +61,6 @@ export default function ContactPage() {
               Location
             </p>
             <p className="mt-3 text-lg text-ink">{site.location}</p>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              {site.address.development}
-            </p>
           </div>
 
           <div className="border border-line bg-surface p-5 sm:p-6">

@@ -4,7 +4,7 @@ export function ProcessSteps({
   eyebrow = "Process",
   heading = "Steps to a successful website.",
   intro = "A clear path from first conversation to launch — so every project stays focused, collaborative and on track.",
-  className = "page-pad mx-auto w-full max-w-6xl py-16 sm:py-20 md:py-28",
+  className = "page-pad mx-auto w-full max-w-6xl py-12 sm:py-16 md:py-20",
 }: {
   eyebrow?: string;
   heading?: string;
@@ -25,7 +25,7 @@ export function ProcessSteps({
         </p>
       </div>
 
-      <ol className="mt-10 divide-y divide-line border-y border-line sm:mt-12 md:mt-14">
+      <ol className="mt-10 divide-y divide-line border-t border-line sm:mt-12 md:mt-14">
         {processSteps.map((step, index) => (
           <li
             key={step.title}

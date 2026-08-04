@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { HeroTypewriter } from "@/components/HeroTypewriter";
+import { HostingPromo } from "@/components/HostingPromo";
 import { LocalClock } from "@/components/LocalClock";
+import { PhotographyPromo } from "@/components/PhotographyPromo";
 import { ProcessSteps } from "@/components/ProcessSteps";
 import {
   about,
   awards,
   certifications,
-  projects,
   qualifications,
   site,
   skills,
 } from "@/lib/data";
+import { listFeaturedCaseStudies } from "@/lib/caseStudies";
 
-export default function HomePage() {
-  const featured = projects.filter((project) => project.featured).slice(0, 3);
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const featured = await listFeaturedCaseStudies(3);
 
   return (
     <>
@@ -113,6 +117,10 @@ export default function HomePage() {
               <Link href="/dunfermline" className="link-underline text-accent">
                 web design &amp; development in Dunfermline
               </Link>
+              , see{" "}
+              <Link href="/photography" className="link-underline text-accent">
+                photography
+              </Link>
               , or{" "}
               <Link href="/book" className="link-underline text-accent">
                 book a consultation
@@ -167,7 +175,7 @@ export default function HomePage() {
 
       <ProcessSteps />
 
-      <section className="page-pad mx-auto w-full max-w-6xl py-16 sm:py-20 md:py-24">
+      <section className="page-pad mx-auto w-full max-w-6xl py-10 sm:py-12 md:py-14">
         <div className="grid gap-8 border border-line bg-surface px-5 py-10 sm:px-8 sm:py-12 md:grid-cols-12 md:gap-10 md:px-12 md:py-14">
           <div className="md:col-span-5">
             <p className="text-[11px] uppercase tracking-[0.18em] text-faint">
@@ -192,12 +200,16 @@ export default function HomePage() {
         </div>
       </section>
 
+      <PhotographyPromo />
+
+      <HostingPromo />
+
       <section className="page-pad mx-auto w-full max-w-6xl py-16 sm:py-20 md:py-28">
         <p className="text-[11px] uppercase tracking-[0.18em] text-faint">
           Credentials
         </p>
         <h2 className="mt-3 max-w-2xl font-display text-[clamp(2.25rem,8vw,3.75rem)] italic leading-[1.05] text-ink">
-          Qualifications, awards &amp; practice.
+          Qualifications, awards &amp; experience.
         </h2>
 
         <div className="mt-10 grid gap-12 sm:mt-14 md:grid-cols-3 md:gap-16">

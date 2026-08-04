@@ -85,6 +85,8 @@ NEXT_PUBLIC_CF_BEACON_TOKEN=your_beacon_token
 
 Without MailerSend vars, the site still runs; the contact API returns an error if email isn’t configured.
 
+On Cloudflare Pages, set these under **Settings → Variables and Secrets** for the **Production** (and Preview, if needed) runtime environment. Encrypted secrets like `MAILERSEND_API_KEY` are only available at runtime — redeploy after adding or changing them so Functions pick them up.
+
 Google Calendar booking URLs live in `lib/data.ts` (`bookingOptions`).
 
 Cloudflare Web Analytics does not use cookies. You can enable it in the Cloudflare dashboard and/or set `NEXT_PUBLIC_CF_BEACON_TOKEN`; visitors are informed on the cookies policy page, without an analytics opt-in.

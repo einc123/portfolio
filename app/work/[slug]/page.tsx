@@ -12,29 +12,25 @@ import {
   getCaseStudyTheme,
   swatchLabelColour,
 } from "@/lib/caseStudyTheme";
-import { getCaseStudySeo } from "@/lib/caseStudySeo";
 import {
-  getAdjacentProjects,
-  getProject,
-  projects,
-  site,
-} from "@/lib/data";
+  findCaseStudyBySlug,
+  getAdjacentCaseStudies,
+} from "@/lib/caseStudies";
+import { site } from "@/lib/data";
 import { caseStudyJsonLd } from "@/lib/seo";
+
+export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return projects.map((project) => ({ slug: project.slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const project = getProject(slug);
-  if (!project) return { title: "Case study" };
+  const found = await findCaseStudyBySlug(slug);
+  if (!found) return { title: "Case study" };
 
-  const seoCopy = getCaseStudySeo(slug);
+  const { project, seo: seoCopy } = found;
 
   return {
     title: seoCopy.title,
@@ -63,12 +59,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CaseStudyPage({ params }: Props) {
   const { slug } = await params;
-  const project = getProject(slug);
-  if (!project) notFound();
+  const found = await findCaseStudyBySlug(slug);
+  if (!found) notFound();
 
-  const { prev, next } = getAdjacentProjects(slug);
+  const { project, seo: seoCopy } = found;
+  const { prev, next } = await getAdjacentCaseStudies(slug);
   const cssVars = getCaseStudyCssVars(project);
-  const seoCopy = getCaseStudySeo(slug);
   const crumbs = [
     { name: "Home", path: "/" },
     { name: "Work", path: "/work" },

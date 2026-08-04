@@ -3,9 +3,11 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ProcessSteps } from "@/components/ProcessSteps";
-import { localProjectSlugs } from "@/lib/caseStudySeo";
-import { getProject, site } from "@/lib/data";
+import { listLocalCaseStudies } from "@/lib/caseStudies";
+import { site } from "@/lib/data";
 import { professionalServiceJsonLd, seo } from "@/lib/seo";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: seo.local.title,
@@ -32,11 +34,8 @@ export const metadata: Metadata = {
   ],
 };
 
-const localProjects = localProjectSlugs
-  .map((slug) => getProject(slug))
-  .filter((project): project is NonNullable<typeof project> => Boolean(project));
-
-export default function DunfermlinePage() {
+export default async function DunfermlinePage() {
+  const localProjects = await listLocalCaseStudies();
   return (
     <>
       <JsonLd data={professionalServiceJsonLd()} />
@@ -166,9 +165,10 @@ export default function DunfermlinePage() {
         eyebrow="How it works"
         heading="From first chat to launch."
         intro="Whether you're down the road in Dunfermline or booking remotely, the path stays the same — clear steps, no mystery agency process."
+        className="page-pad mx-auto w-full max-w-6xl pb-8 pt-12 sm:pb-10 sm:pt-16 md:pb-12 md:pt-20"
       />
 
-      <section className="page-pad mx-auto w-full max-w-6xl pb-16 pt-4 sm:pb-20">
+      <section className="page-pad mx-auto w-full max-w-6xl pb-16 pt-2 sm:pb-20 sm:pt-4">
         <div className="relative overflow-hidden border border-line bg-band px-5 py-12 text-white sm:px-8 sm:py-14 md:px-14 md:py-16">
           <div
             className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-accent/40 blur-3xl"

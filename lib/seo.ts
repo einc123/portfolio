@@ -5,13 +5,15 @@ export const seo = {
   titleDefault: `${site.name} — ${site.title}`,
   titleTemplate: `%s — ${site.brand}`,
   description:
-    "Web designer and developer in Dunfermline, Scotland. Euan Livingstone MBCS builds fast, accessible websites — from brand and UI design in Figma through to production-ready development and SEO.",
+    "Freelance web designer and developer in Dunfermline, Scotland. Euan Livingstone MBCS builds fast, accessible websites — from brand and UI in Figma through to production, hosting care, and SEO.",
   keywords: [
     "Euan Livingstone",
+    "freelance web designer Dunfermline",
     "web designer Dunfermline",
     "web developer Dunfermline",
     "web designer Fife",
     "web developer Scotland",
+    "freelance web developer Scotland",
     "MBCS",
     "portfolio",
     "Figma",
@@ -19,16 +21,30 @@ export const seo = {
     "UI UX design",
     "brand design",
     "SEO",
+    "website hosting Scotland",
+    "website maintenance",
+    "photography Dunfermline",
+    "drone photography Scotland",
     "Edinburgh Napier",
   ],
   ogDescription:
-    "Crafting clear, production-ready websites with six years of design and development practice — based in Dunfermline, Scotland.",
+    "Clear, production-ready websites from a freelance designer–developer in Dunfermline — with hosting care and photography when a project needs it.",
   local: {
     title: "Web designer & developer in Dunfermline — Euan Livingstone MBCS",
     description:
       "Freelance web designer and developer based in Dunfermline, Fife. Local sites for Scout groups, clubs and charities — plus remote work for UK clients. Book a chat with Euan Livingstone MBCS.",
     ogDescription:
-      "Independent web design and development from Dunfermline — clear sites for local organisations and remote UK projects.",
+      "Independent freelance web design and development from Dunfermline — clear sites for local organisations and remote UK projects.",
+  },
+  hosting: {
+    title: "Hosting — Managed OVH, Spaceship or Verpex",
+    description:
+      "Freelance hosting paths from Euan Livingstone MBCS: managed in-house on OVH with or without maintenance, or unmanaged via Spaceship, Verpex, or your own stack.",
+  },
+  photography: {
+    title: "Photography & drone photography",
+    description:
+      "Still and licensed drone photography from freelance photographer Euan Livingstone in Dunfermline — Fujifilm X-M5 and DJI Mini 3, with public liability insurance.",
   },
 } as const;
 
@@ -75,6 +91,10 @@ export function personJsonLd() {
       "UI/UX design",
       "Brand design",
       "Search engine optimisation",
+      "Website hosting",
+      "Website maintenance",
+      "Photography",
+      "Drone photography",
       "Next.js",
       "React",
       "Figma",
@@ -133,6 +153,10 @@ export function professionalServiceJsonLd() {
       "Brand design",
       "UI/UX design",
       "Search engine optimisation",
+      "Website hosting",
+      "Website maintenance",
+      "Photography",
+      "Drone photography",
     ],
     knowsLanguage: ["en-GB"],
     sameAs: [site.linkedin],

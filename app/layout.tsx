@@ -5,7 +5,7 @@ import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { CustomCursor } from "@/components/CustomCursor";
 import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { SiteHeader } from "@/components/SiteHeader";
 import { InlineScript } from "@/components/InlineScript";
 import { JsonLd } from "@/components/JsonLd";
 import { PageTransition } from "@/components/PageTransition";
@@ -130,7 +130,7 @@ export default function RootLayout({
         <CookieConsentBanner />
         <AnalyticsBeacon />
         <div className="site-shell flex min-h-full flex-col">
-          <Header />
+          <SiteHeader />
           <main className="flex-1">{children}</main>
           <Footer />
         </div>

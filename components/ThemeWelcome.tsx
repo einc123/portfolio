@@ -230,6 +230,15 @@ export function ThemeWelcome() {
 
   if (stage === "hidden") return null;
 
+  function closeFromChrome() {
+    if (!canInteract) return;
+    if (variant === "revisit") {
+      dismiss(true);
+      return;
+    }
+    finish();
+  }
+
   return (
     <div
       className={`theme-welcome ${stage === "enter" ? "is-enter" : ""} ${
@@ -239,11 +248,34 @@ export function ThemeWelcome() {
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="theme-welcome__backdrop" aria-hidden />
+      <button
+        type="button"
+        className="theme-welcome__backdrop"
+        aria-label="Close theme settings"
+        onClick={() => {
+          if (!canInteract || variant !== "revisit") return;
+          dismiss(true);
+        }}
+        tabIndex={variant === "revisit" ? 0 : -1}
+        disabled={!canInteract || variant !== "revisit"}
+      />
       <div className="theme-welcome__glow theme-welcome__glow--a" aria-hidden />
       <div className="theme-welcome__glow theme-welcome__glow--b" aria-hidden />
 
       <div className="theme-welcome__panel">
+        <button
+          type="button"
+          className="theme-welcome__close"
+          onClick={closeFromChrome}
+          disabled={!canInteract}
+          aria-label={
+            variant === "revisit"
+              ? "Close theme settings"
+              : "Continue with current theme"
+          }
+        >
+          <span aria-hidden>×</span>
+        </button>
         <p className="theme-welcome__eyebrow">{copy.eyebrow}</p>
         <h2 id={titleId} className="theme-welcome__title">
           {copy.title}

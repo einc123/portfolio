@@ -3,7 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProcessSteps } from "@/components/ProcessSteps";
-import { projects } from "@/lib/data";
+import { listPublishedCaseStudies } from "@/lib/caseStudies";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Work",
@@ -18,7 +20,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function WorkPage() {
+export default async function WorkPage() {
+  const projects = await listPublishedCaseStudies();
+
   return (
     <>
       <div className="page-pad mx-auto w-full max-w-6xl pt-6 sm:pt-8 md:pt-12">
@@ -108,9 +112,10 @@ export default function WorkPage() {
 
       <ProcessSteps
         intro="Every case study follows the same disciplined path — from planning through design, build, refinement and launch."
+        className="page-pad mx-auto w-full max-w-6xl pb-8 pt-12 sm:pb-10 sm:pt-16 md:pb-12 md:pt-20"
       />
 
-      <section className="page-pad mx-auto w-full max-w-6xl border-t border-line pb-16 pt-12 sm:pt-14">
+      <section className="page-pad mx-auto w-full max-w-6xl pb-16 pt-2 sm:pt-4">
         <h2 className="font-display text-[clamp(1.85rem,7vw,2.75rem)] italic leading-[1.05] text-ink">
           Let&apos;s talk about your next project.
         </h2>
