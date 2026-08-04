@@ -169,7 +169,7 @@ Google Calendar booking URLs live in `lib/data.ts` (`bookingOptions`).
 
 ## Deploy (Cloudflare Workers)
 
-Production runs as a **Worker** with OpenNext output and a **D1** binding named `DB` (`wrangler.jsonc`).
+Production runs as the Cloudflare Worker named **`portfolio`** (see `wrangler.jsonc`) with OpenNext output and a **D1** binding named `DB`.
 
 ### Local deploy
 
@@ -179,16 +179,34 @@ npm run deploy    # opennextjs-cloudflare build && deploy
 
 ### Workers Builds (Git)
 
+Your log failed with *“Could not find compiled Open Next config”* because the build step was only `npm run build` → `next build`. That never creates `.open-next/`.
+
+Set **both** of these in Cloudflare → Worker → Settings → Builds:
+
 | Setting | Value |
 | --- | --- |
 | **Build command** | `npx opennextjs-cloudflare build` |
 | **Deploy command** | `npx wrangler deploy` |
 
-Do **not** set the Cloudflare build command to `npm run build` if that script is also `opennextjs-cloudflare build` — OpenNext calls `npm run build` → infinite recursion. Keep `"build": "next build"` in `package.json`, and use `npx opennextjs-cloudflare build` (or `npm run deploy`) as the Workers Builds / CI build step.
+Alternative if you prefer to keep build as `npm run build`:
 
-`next build` alone is not enough for deploy — OpenNext must emit `.open-next/worker.js` before Wrangler runs.
+| Setting | Value |
+| --- | --- |
+| **Build command** | `npm run build` |
+| **Deploy command** | `npm run deploy` |
 
-After deploy, confirm `https://your-domain/sitemap.xml` returns XML, then resubmit the sitemap in Google Search Console. If crawlers fail intermittently, check Cloudflare **Bot Fight Mode**.
+(`npm run deploy` runs OpenNext build + deploy itself.)
+
+Keep `"build": "next build"` in `package.json`. OpenNext calls that internally — pointing `build` at `opennextjs-cloudflare build` causes an infinite loop.
+
+After a successful deploy, run remote D1 migrations if tables are missing (`organisation_case_studies` etc.):
+
+```bash
+npm run db:migrate:remote
+npm run db:seed-case-studies:remote   # optional
+```
+
+Then confirm `https://your-domain/sitemap.xml` returns XML and resubmit it in Google Search Console. If crawlers fail intermittently, check Cloudflare **Bot Fight Mode**.
 
 ## Licence
 
