@@ -75,11 +75,13 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 ```bash
-npm run build      # Next.js production build
+npm run build      # Next.js only (`next build`) — required name for OpenNext
 npm run start      # Node server (local only)
 npm run preview    # OpenNext build + Workers runtime locally
 npm run lint
 ```
+
+OpenNext invokes `npm run build` internally, so that script **must** stay as `next build`. Do not point it at `opennextjs-cloudflare build` (infinite loop).
 
 ### Database modes
 
@@ -182,7 +184,9 @@ npm run deploy    # opennextjs-cloudflare build && deploy
 | **Build command** | `npx opennextjs-cloudflare build` |
 | **Deploy command** | `npx wrangler deploy` |
 
-`next build` alone is not enough — OpenNext must emit `.open-next/worker.js` before Wrangler deploys.
+Do **not** set the Cloudflare build command to `npm run build` if that script is also `opennextjs-cloudflare build` — OpenNext calls `npm run build` → infinite recursion. Keep `"build": "next build"` in `package.json`, and use `npx opennextjs-cloudflare build` (or `npm run deploy`) as the Workers Builds / CI build step.
+
+`next build` alone is not enough for deploy — OpenNext must emit `.open-next/worker.js` before Wrangler runs.
 
 After deploy, confirm `https://your-domain/sitemap.xml` returns XML, then resubmit the sitemap in Google Search Console. If crawlers fail intermittently, check Cloudflare **Bot Fight Mode**.
 
