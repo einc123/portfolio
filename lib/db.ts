@@ -324,7 +324,8 @@ async function runQuery<T extends Record<string, unknown>>(
     }
   }
 
-  if ((driver === "auto" || driver === "remote") && remoteReady) {
+  // Explicit "remote" already returned above; this is auto-mode fallback only.
+  if (driver === "auto" && remoteReady) {
     const remote = await remoteQuery<T>(statement, values);
     return {
       results: remote.results,
