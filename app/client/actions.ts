@@ -111,13 +111,11 @@ function appearanceFromUser(user: {
   preferred_theme?: string | null;
   preferred_accent?: string | null;
 }): Pick<ActionState, "preferredTheme" | "preferredAccent"> {
+  const theme = user.preferred_theme ?? null;
+  const accent = user.preferred_accent ?? null;
   return {
-    preferredTheme: isTheme(user.preferred_theme ?? null)
-      ? user.preferred_theme
-      : null,
-    preferredAccent: isAccent(user.preferred_accent ?? null)
-      ? user.preferred_accent
-      : null,
+    preferredTheme: isTheme(theme) ? theme : null,
+    preferredAccent: isAccent(accent) ? accent : null,
   };
 }
 
@@ -194,8 +192,10 @@ export async function saveAppearancePreferences(input: {
     return { ok: false };
   }
 
-  const theme = isTheme(input.theme ?? null) ? input.theme : null;
-  const accent = isAccent(input.accent ?? null) ? input.accent : null;
+  const themeRaw = input.theme ?? null;
+  const accentRaw = input.accent ?? null;
+  const theme = isTheme(themeRaw) ? themeRaw : null;
+  const accent = isAccent(accentRaw) ? accentRaw : null;
   if (!theme && !accent) return { ok: true };
 
   try {
