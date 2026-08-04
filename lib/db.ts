@@ -1,4 +1,3 @@
-import Database from "better-sqlite3";
 import { mkdirSync } from "fs";
 import { dirname, resolve } from "path";
 
@@ -125,10 +124,39 @@ function hasRemoteCredentials() {
   );
 }
 
-let localDb: Database.Database | null = null;
+/** True on Cloudflare Workers / workerd (never use better-sqlite3 there). */
+function isCloudflareRuntime() {
+  return (
+    typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !==
+      "undefined" ||
+    process.env.CF_PAGES === "1" ||
+    typeof process.env.CF_WORKER !== "undefined"
+  );
+}
 
-function getLocalSqlite() {
+type BetterSqlite = {
+  default: new (
+    path: string,
+  ) => {
+    pragma: (sql: string) => unknown;
+    prepare: (sql: string) => {
+      all: (...values: unknown[]) => unknown[];
+      run: (...values: unknown[]) => { lastInsertRowid: number | bigint; changes: number };
+    };
+    close: () => void;
+  };
+};
+
+let localDb: InstanceType<BetterSqlite["default"]> | null = null;
+
+async function getLocalSqlite() {
   if (localDb) return localDb;
+  if (isCloudflareRuntime()) {
+    throw new Error(
+      "Local SQLite is not available on Cloudflare Workers. Use the D1 binding (DB).",
+    );
+  }
+  const { default: Database } = (await import("better-sqlite3")) as BetterSqlite;
   const file =
     process.env.D1_LOCAL_PATH?.trim() ||
     resolve(process.cwd(), ".data", "euanliv-click.sqlite");
@@ -210,7 +238,7 @@ async function runLocal<T extends Record<string, unknown>>(
   statement: string,
   values: Array<string | number | null>,
 ) {
-  const db = getLocalSqlite();
+  const db = await getLocalSqlite();
   if (/^\s*select/i.test(statement)) {
     const rows = db.prepare(statement).all(...values) as T[];
     return { results: rows, insertId: 0, changes: 0 };
@@ -223,6 +251,24 @@ async function runLocal<T extends Record<string, unknown>>(
   };
 }
 
+async function runViaBinding<T extends Record<string, unknown>>(
+  statement: string,
+  values: Array<string | number | null>,
+  binding: D1Like,
+) {
+  const prepared = binding.prepare(statement).bind(...values);
+  if (/^\s*select/i.test(statement)) {
+    const { results } = await prepared.all<T>();
+    return { results, insertId: 0, changes: 0 };
+  }
+  const result = await prepared.run();
+  return {
+    results: [] as T[],
+    insertId: result.meta?.last_row_id ?? 0,
+    changes: result.meta?.changes ?? 0,
+  };
+}
+
 async function runQuery<T extends Record<string, unknown>>(
   sql: string,
   params: SqlParams = {},
@@ -230,27 +276,26 @@ async function runQuery<T extends Record<string, unknown>>(
   const { sql: statement, values } = bindNamed(sql, params);
   const driver = configuredDriver();
 
-  if (driver === "binding" || driver === "auto") {
+  // Prefer the Workers D1 binding whenever available — including when
+  // CLOUDFLARE_D1_MODE=remote is set without API credentials (common misconfig).
+  if (driver !== "local") {
     const binding = await getBindingDb();
     if (binding) {
-      const prepared = binding.prepare(statement).bind(...values);
-      if (/^\s*select/i.test(statement)) {
-        const { results } = await prepared.all<T>();
-        return { results, insertId: 0, changes: 0 };
+      try {
+        return await runViaBinding<T>(statement, values, binding);
+      } catch (error) {
+        if (driver === "binding") throw error;
+        console.error("D1 binding query failed; trying fallback", error);
       }
-      const result = await prepared.run();
-      return {
-        results: [],
-        insertId: result.meta?.last_row_id ?? 0,
-        changes: result.meta?.changes ?? 0,
-      };
-    }
-    if (driver === "binding") {
+    } else if (driver === "binding") {
       throw new Error("D1 binding DB is not available in this runtime.");
     }
   }
 
-  if (driver === "remote" || (driver === "auto" && hasRemoteCredentials())) {
+  if (
+    (driver === "remote" || driver === "auto") &&
+    hasRemoteCredentials()
+  ) {
     const remote = await remoteQuery<T>(statement, values);
     return {
       results: remote.results,
@@ -259,7 +304,22 @@ async function runQuery<T extends Record<string, unknown>>(
     };
   }
 
-  return runLocal<T>(statement, values);
+  if (driver === "remote") {
+    throw new Error(
+      "CLOUDFLARE_D1_MODE=remote needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN. On the Worker, remove that mode and use the DB binding instead.",
+    );
+  }
+
+  if (driver === "local" || driver === "auto") {
+    if (isCloudflareRuntime()) {
+      throw new Error(
+        "D1 binding unavailable on Cloudflare Workers (cannot use local SQLite).",
+      );
+    }
+    return runLocal<T>(statement, values);
+  }
+
+  throw new Error(`Unsupported D1 mode: ${driver}`);
 }
 
 export async function queryRows<T extends Record<string, unknown>>(
@@ -305,24 +365,25 @@ export async function resolveDbDriver(): Promise<{
 }> {
   const configured = configuredDriver();
 
-  if (configured === "binding") {
-    const binding = await getBindingDb();
-    if (!binding) {
-      throw new Error("D1 binding DB is not available in this runtime.");
-    }
-    return { mode: "binding", configured };
-  }
-
-  if (configured === "remote") {
-    return { mode: "remote", configured };
-  }
-
   if (configured === "local") {
     return { mode: "local", configured };
   }
 
   const binding = await getBindingDb();
   if (binding) return { mode: "binding", configured };
-  if (hasRemoteCredentials()) return { mode: "remote", configured };
+
+  if (configured === "binding") {
+    throw new Error("D1 binding DB is not available in this runtime.");
+  }
+
+  if (configured === "remote" || hasRemoteCredentials()) {
+    if (hasRemoteCredentials()) return { mode: "remote", configured };
+    if (configured === "remote") {
+      throw new Error(
+        "CLOUDFLARE_D1_MODE=remote needs API credentials (or use the DB binding).",
+      );
+    }
+  }
+
   return { mode: "local", configured };
 }

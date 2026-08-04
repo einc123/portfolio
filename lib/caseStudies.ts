@@ -5,6 +5,7 @@ import {
   type SqlParams,
 } from "@/lib/db";
 import type { Project } from "@/lib/data";
+import { caseStudySeedProjects } from "@/lib/caseStudySeed";
 
 export type DbCaseStudy = {
   organisation_id: number;
@@ -111,51 +112,96 @@ export function mapCaseStudySeo(row: DbCaseStudy, project: Project): CaseStudySe
 }
 
 export async function listPublishedCaseStudies() {
-  const rows = await queryRows<DbCaseStudy>(
-    `SELECT * FROM organisation_case_studies
-     ORDER BY featured DESC, year DESC, title ASC`,
-  );
-  return rows.map(mapCaseStudyRow);
+  try {
+    const rows = await queryRows<DbCaseStudy>(
+      `SELECT * FROM organisation_case_studies
+       ORDER BY featured DESC, year DESC, title ASC`,
+    );
+    return rows.map(mapCaseStudyRow);
+  } catch (error) {
+    console.error("listPublishedCaseStudies: falling back to seed", error);
+    return caseStudySeedProjects;
+  }
 }
 
 export async function listFeaturedCaseStudies(limit = 3) {
-  const rows = await queryRows<DbCaseStudy>(
-    `SELECT * FROM organisation_case_studies
-     WHERE featured = 1
-     ORDER BY year DESC, title ASC
-     LIMIT :limit`,
-    { limit },
-  );
-  return rows.map(mapCaseStudyRow);
+  try {
+    const rows = await queryRows<DbCaseStudy>(
+      `SELECT * FROM organisation_case_studies
+       WHERE featured = 1
+       ORDER BY year DESC, title ASC
+       LIMIT :limit`,
+      { limit },
+    );
+    return rows.map(mapCaseStudyRow);
+  } catch (error) {
+    console.error("listFeaturedCaseStudies: falling back to seed", error);
+    return caseStudySeedProjects
+      .filter((project) => project.featured)
+      .slice(0, limit);
+  }
 }
 
 export async function listLocalCaseStudies() {
-  const rows = await queryRows<DbCaseStudy>(
-    `SELECT * FROM organisation_case_studies
-     WHERE show_on_local = 1
-     ORDER BY year DESC, title ASC`,
-  );
-  return rows.map(mapCaseStudyRow);
+  try {
+    const rows = await queryRows<DbCaseStudy>(
+      `SELECT * FROM organisation_case_studies
+       WHERE show_on_local = 1
+       ORDER BY year DESC, title ASC`,
+    );
+    return rows.map(mapCaseStudyRow);
+  } catch (error) {
+    console.error("listLocalCaseStudies: falling back to seed", error);
+    return caseStudySeedProjects.filter((project) =>
+      /scout|fife|dunfermline|nine-acres|kasc|cycle/i.test(
+        `${project.slug} ${project.title}`,
+      ),
+    );
+  }
 }
 
 export async function listCharityCaseStudies() {
-  const rows = await queryRows<DbCaseStudy>(
-    `SELECT * FROM organisation_case_studies
-     WHERE show_on_charity = 1
-     ORDER BY year DESC, title ASC`,
-  );
-  return rows.map(mapCaseStudyRow);
+  try {
+    const rows = await queryRows<DbCaseStudy>(
+      `SELECT * FROM organisation_case_studies
+       WHERE show_on_charity = 1
+       ORDER BY year DESC, title ASC`,
+    );
+    return rows.map(mapCaseStudyRow);
+  } catch (error) {
+    console.error("listCharityCaseStudies: falling back to seed", error);
+    return caseStudySeedProjects.filter((project) =>
+      /scout|charity|community|nine-acres|kasc|cycle|coasters|barter/i.test(
+        `${project.slug} ${project.title} ${(project.highlights || []).join(" ")}`,
+      ),
+    );
+  }
 }
 
 export async function findCaseStudyBySlug(slug: string) {
-  const rows = await queryRows<DbCaseStudy>(
-    `SELECT * FROM organisation_case_studies WHERE slug = :slug LIMIT 1`,
-    { slug },
-  );
-  const row = rows[0];
-  if (!row) return null;
-  const project = mapCaseStudyRow(row);
-  return { row, project, seo: mapCaseStudySeo(row, project) };
+  try {
+    const rows = await queryRows<DbCaseStudy>(
+      `SELECT * FROM organisation_case_studies WHERE slug = :slug LIMIT 1`,
+      { slug },
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const project = mapCaseStudyRow(row);
+    return { row, project, seo: mapCaseStudySeo(row, project) };
+  } catch (error) {
+    console.error("findCaseStudyBySlug: falling back to seed", error);
+    const project = caseStudySeedProjects.find((item) => item.slug === slug);
+    if (!project) return null;
+    return {
+      row: null,
+      project,
+      seo: {
+        title: `${project.title} case study`,
+        description: `${project.summary} Design and development by Euan Livingstone MBCS.`,
+        headline: project.summary,
+      },
+    };
+  }
 }
 
 export async function findCaseStudyByOrganisationId(organisationId: number) {

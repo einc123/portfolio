@@ -228,35 +228,53 @@ export async function loginWithPassword(
     return { error: "Enter your email and password." };
   }
 
-  const user = await findUserByEmail(email);
-  if (!user || user.status !== "active") {
-    return { error: "Invalid email or password." };
-  }
+  try {
+    const user = await findUserByEmail(email);
+    if (!user || user.status !== "active") {
+      return { error: "Invalid email or password." };
+    }
 
-  if (!user.password_hash) {
-    return { error: "Invalid email or password." };
-  }
+    if (!user.password_hash) {
+      return { error: "Invalid email or password." };
+    }
 
-  const valid = await verifyPassword(password, user.password_hash);
-  if (!valid) {
-    return { error: "Invalid email or password." };
-  }
+    const valid = await verifyPassword(password, user.password_hash);
+    if (!valid) {
+      return { error: "Invalid email or password." };
+    }
 
-  if (user.totp_enabled && user.totp_secret) {
-    await setSession(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.full_name?.trim() || user.email,
-        isAdmin: Boolean(user.is_admin),
-        pending2fa: true,
-      },
-      60 * 10,
-    );
-    return { ok: true, needs2fa: true };
-  }
+    if (user.totp_enabled && user.totp_secret) {
+      await setSession(
+        {
+          userId: user.id,
+          email: user.email,
+          name: user.full_name?.trim() || user.email,
+          isAdmin: Boolean(user.is_admin),
+          pending2fa: true,
+        },
+        60 * 10,
+      );
+      return { ok: true, needs2fa: true };
+    }
 
-  return establishAfterAuth(user);
+    return await establishAfterAuth(user);
+  } catch (error) {
+    console.error("loginWithPassword failed", error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (/AUTH_SECRET/i.test(message)) {
+      return {
+        error:
+          "Sign-in is misconfigured (AUTH_SECRET). Check Worker secrets and try again.",
+      };
+    }
+    if (/no such table|D1_ERROR|D1 query failed/i.test(message)) {
+      return {
+        error:
+          "The client database is not ready yet. Apply D1 migrations, then try again.",
+      };
+    }
+    return { error: "Sign-in failed. Please try again in a moment." };
+  }
 }
 
 export async function verifyLogin2fa(
