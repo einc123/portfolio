@@ -386,6 +386,7 @@ export async function adminInviteClient(
   const organisationIdRaw = String(formData.get("organisationId") ?? "").trim();
   const role =
     String(formData.get("role") ?? "member") === "owner" ? "owner" : "member";
+  const stripeCustomerId = String(formData.get("stripeCustomerId") ?? "").trim();
 
   if (!firstName) {
     return { error: "Enter a first name." };
@@ -395,6 +396,9 @@ export async function adminInviteClient(
   }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Enter a valid email address." };
+  }
+  if (stripeCustomerId && !stripeCustomerId.startsWith("cus_")) {
+    return { error: "Enter a Stripe customer id (cus_…) or leave it blank." };
   }
 
   const fullName = `${firstName} ${lastName}`.replace(/\s+/g, " ").trim();
@@ -429,6 +433,12 @@ export async function adminInviteClient(
         inviteToken,
         expiresAt,
       });
+    }
+
+    if (stripeCustomerId) {
+      await assignStripeCustomerToUser(invited.user, stripeCustomerId);
+    } else if (!invited.user.stripe_customer_id) {
+      await createStripeCustomerForUser(invited.user);
     }
   } catch (error) {
     return {

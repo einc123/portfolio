@@ -39,7 +39,9 @@ export function AdminCreateUsers({
         <h2 className="font-display text-2xl italic text-ink">Invite user</h2>
         <p className="mt-2 text-sm text-muted">
           Emails a registration link. Assign them to an existing organisation as
-          a member or owner, or create a new organisation for them.
+          a member or owner, or create a new organisation for them. A Stripe
+          customer is created on invite unless you paste an existing customer
+          id.
         </p>
         <InviteForm organisations={organisations} />
       </section>
@@ -189,6 +191,24 @@ function InviteForm({ organisations }: { organisations: OrgOption[] }) {
           </span>
         </label>
       )}
+
+      <label className="block">
+        <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+          Stripe customer id{" "}
+          <span className="normal-case tracking-normal text-faint/80">
+            (optional)
+          </span>
+        </span>
+        <input
+          name="stripeCustomerId"
+          placeholder="cus_… — leave blank to create one"
+          className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+        />
+        <span className="mt-1 block text-xs text-faint">
+          Paste an existing Stripe customer id if they already have one.
+          Otherwise a new customer is created when you send the invite.
+        </span>
+      </label>
 
       <Feedback state={state} />
       <button
