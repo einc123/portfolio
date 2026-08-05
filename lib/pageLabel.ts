@@ -13,12 +13,14 @@ const pageLabels: Record<string, string> = {
   "/cookies": "Cookies",
   "/client/login": "Client login",
   "/client/dashboard": "Dashboard",
+  "/client/status": "Status",
   "/client/invoices": "Invoices",
   "/client/profile": "Profile",
   "/client/security": "Security",
   "/client/select-org": "Organisations",
   "/client/admin": "Admin",
   "/client/admin/organisations": "Organisations",
+  "/client/admin/status": "Status",
   "/client/admin/create": "Create",
 };
 

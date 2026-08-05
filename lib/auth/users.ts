@@ -428,6 +428,25 @@ export async function removeMember(userId: number, organisationId: number) {
   );
 }
 
+export async function deleteUserById(userId: number) {
+  const result = await execute(`DELETE FROM client_users WHERE id = :id`, {
+    id: userId,
+  });
+  if (!result.changes) {
+    throw new Error("User not found.");
+  }
+}
+
+export async function deleteOrganisationById(organisationId: number) {
+  const result = await execute(
+    `DELETE FROM client_organisations WHERE id = :id`,
+    { id: organisationId },
+  );
+  if (!result.changes) {
+    throw new Error("Organisation not found.");
+  }
+}
+
 export async function renameOrganisation(organisationId: number, name: string) {
   const hasCaseStudy = await organisationHasCaseStudy(organisationId);
 
@@ -476,6 +495,12 @@ export async function updateOrganisationDetails(input: {
   maintenanceIncluded?: boolean;
   maintenanceIncludedAmountPence?: number | null;
   maintenanceIncludedInterval?: "month" | "year" | null;
+  projectStatus?:
+    | "planning"
+    | "design"
+    | "development"
+    | "changes"
+    | "launch";
 }) {
   if (input.name !== undefined) {
     await renameOrganisation(input.organisationId, input.name);
@@ -541,6 +566,18 @@ export async function updateOrganisationDetails(input: {
         interval: included
           ? (input.maintenanceIncludedInterval ?? null)
           : null,
+      },
+    );
+  }
+  if (input.projectStatus !== undefined) {
+    await execute(
+      `UPDATE client_organisations
+       SET project_status = :projectStatus,
+           updated_at = datetime('now')
+       WHERE id = :id`,
+      {
+        id: input.organisationId,
+        projectStatus: input.projectStatus,
       },
     );
   }

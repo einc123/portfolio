@@ -71,6 +71,13 @@ export default async function ClientAdminOrganisationsPage() {
             org.maintenance_included_interval === "month"
               ? org.maintenance_included_interval
               : null,
+          project_status:
+            org.project_status === "design" ||
+            org.project_status === "development" ||
+            org.project_status === "changes" ||
+            org.project_status === "launch"
+              ? org.project_status
+              : "planning",
           members: org.members,
           hasCaseStudy: withCaseStudy.has(org.id),
         }))}

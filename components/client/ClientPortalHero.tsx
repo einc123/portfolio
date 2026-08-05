@@ -6,6 +6,7 @@ import { logoutAction } from "@/app/client/actions";
 
 export type PortalNavId =
   | "dashboard"
+  | "status"
   | "profile"
   | "security"
   | "organisations"
@@ -24,6 +25,7 @@ type Props = {
 const NAV: { id: PortalNavId; href: string; label: string; adminOnly?: boolean }[] =
   [
     { id: "dashboard", href: "/client/dashboard", label: "Dashboard" },
+    { id: "status", href: "/client/status", label: "Status" },
     { id: "profile", href: "/client/profile", label: "Profile" },
     { id: "security", href: "/client/security", label: "Security" },
     {
@@ -38,6 +40,7 @@ function activeId(pathname: string): PortalNavId | null {
   if (pathname.startsWith("/client/admin")) return "admin";
   if (pathname.startsWith("/client/security")) return "security";
   if (pathname.startsWith("/client/profile")) return "profile";
+  if (pathname.startsWith("/client/status")) return "status";
   if (pathname.startsWith("/client/invoices")) return "dashboard";
   if (pathname.startsWith("/client/select-org")) return "organisations";
   if (pathname.startsWith("/client/dashboard")) return "dashboard";

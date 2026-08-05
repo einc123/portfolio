@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CancelMaintenanceButton } from "@/components/client/CancelMaintenanceButton";
 import { ClientContractsPanel } from "@/components/client/ClientContractsPanel";
+import { OrgStatusTimeline } from "@/components/client/OrgStatusTimeline";
 import { RaiseMaintenanceRequestPanel } from "@/components/client/RaiseMaintenanceRequestPanel";
 import type { DbOrganisationContract } from "@/lib/contracts/store";
 import type { DbOrganisation } from "@/lib/db";
@@ -127,6 +128,12 @@ export function ClientDashboardOverview({
 
   return (
     <div className="mt-8 space-y-6">
+      <OrgStatusTimeline
+        status={organisation.project_status}
+        variant="compact"
+        showViewLink
+      />
+
       <div className="grid gap-6 md:grid-cols-2">
         <section className="border border-line bg-surface px-5 py-6 sm:px-6">
           <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">

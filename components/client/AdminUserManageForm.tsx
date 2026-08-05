@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   adminAddOrganisationToUser,
+  adminDeleteUser,
   adminRemoveOrganisationFromUser,
   adminSendPasswordReset,
   adminUpdateUser,
@@ -86,6 +87,10 @@ export function AdminUserManageForm({
   );
   const [resetState, resetAction, resetPending] = useActionState(
     adminSendPasswordReset,
+    initial,
+  );
+  const [deleteState, deleteAction, deletePending] = useActionState(
+    adminDeleteUser,
     initial,
   );
 
@@ -434,6 +439,47 @@ export function AdminUserManageForm({
             className="inline-flex min-h-11 items-center border border-line px-5 text-sm disabled:opacity-60"
           >
             {resetPending ? "Sending…" : "Send password reset email"}
+          </button>
+        </form>
+      </section>
+
+      <section className="border-t border-line pt-6">
+        <h2 className="font-display text-xl italic text-ink">Delete user</h2>
+        <p className="mt-2 text-sm text-muted">
+          Permanently removes this account, memberships, and passkeys. This
+          cannot be undone.
+        </p>
+        <form action={deleteAction} className="mt-4 space-y-3">
+          <input type="hidden" name="userId" value={user.id} />
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              name="notifyByEmail"
+              type="checkbox"
+              defaultChecked
+              className="mt-1 h-4 w-4"
+            />
+            <span>
+              Email {user.email} that their account has been deleted
+            </span>
+          </label>
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              name="confirmDelete"
+              type="checkbox"
+              required
+              className="mt-1 h-4 w-4"
+            />
+            <span>I understand this permanently deletes the user</span>
+          </label>
+          {deleteState.error ? (
+            <p className="text-sm text-red-600">{deleteState.error}</p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={deletePending}
+            className="inline-flex min-h-11 items-center border border-red-600/40 px-5 text-sm text-red-700 disabled:opacity-60"
+          >
+            {deletePending ? "Deleting…" : "Delete user"}
           </button>
         </form>
       </section>

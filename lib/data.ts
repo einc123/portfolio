@@ -197,31 +197,53 @@ export const skills = {
 
 export const processSteps = [
   {
+    id: "planning",
     title: "Planning",
     description:
       "Goals, audience and scope — clarifying what the site must achieve before a single layout is drawn.",
   },
   {
+    id: "design",
     title: "Design",
     description:
       "Wireframes and UI in Figma, with brand and visual assets refined so the experience feels intentional.",
   },
   {
+    id: "development",
     title: "Development",
     description:
       "Building a fast, responsive site with clean structure, accessibility and SEO baked in from the start.",
   },
   {
+    id: "changes",
     title: "Changes",
     description:
       "Review rounds and refinements — polishing content, interactions and details until it feels right.",
   },
   {
+    id: "launch",
     title: "Launch",
     description:
       "Go-live checks, handover and support so the site ships confidently and stays easy to maintain.",
   },
 ] as const;
+
+export type OrgProjectStatus = (typeof processSteps)[number]["id"];
+
+export function isOrgProjectStatus(value: string): value is OrgProjectStatus {
+  return processSteps.some((step) => step.id === value);
+}
+
+export function parseOrgProjectStatus(
+  value: string | null | undefined,
+): OrgProjectStatus {
+  if (value && isOrgProjectStatus(value)) return value;
+  return "planning";
+}
+
+export function orgProjectStatusIndex(status: OrgProjectStatus): number {
+  return processSteps.findIndex((step) => step.id === status);
+}
 
 export type Project = {
   slug: string;

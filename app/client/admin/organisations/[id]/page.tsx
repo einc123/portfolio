@@ -136,6 +136,13 @@ export default async function ClientAdminManageOrganisationPage({
             organisation.maintenance_included_interval === "month"
               ? organisation.maintenance_included_interval
               : null,
+          project_status:
+            organisation.project_status === "design" ||
+            organisation.project_status === "development" ||
+            organisation.project_status === "changes" ||
+            organisation.project_status === "launch"
+              ? organisation.project_status
+              : "planning",
           members: organisation.members,
         }}
         users={users.map((person) => ({

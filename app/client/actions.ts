@@ -16,6 +16,8 @@ import {
   completeInviteRegistration,
   createActiveUser,
   createOrganisation,
+  deleteOrganisationById,
+  deleteUserById,
   findOrganisationById,
   findUserByEmail,
   findUserById,
@@ -60,6 +62,7 @@ import {
   upsertCaseStudy,
 } from "@/lib/caseStudies";
 import { sendClientInviteEmail } from "@/lib/mail/clientInvite";
+import { sendAccountDeletedEmail } from "@/lib/mail/accountDeleted";
 import { sendBillingPaymentEmail } from "@/lib/mail/billingPayment";
 import { sendPasswordResetEmail } from "@/lib/mail/passwordReset";
 import { sendSubscriptionCancellationRequestEmail } from "@/lib/mail/cancellationRequest";
@@ -1082,6 +1085,100 @@ export async function adminRemoveOrganisationFromUser(
   return { ok: true };
 }
 
+export async function adminDeleteUser(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAdminSession();
+  if (!session) return { error: "Admin access required." };
+
+  const userId = Number(formData.get("userId"));
+  const confirmed = formData.get("confirmDelete") === "on";
+  const notifyByEmail = formData.get("notifyByEmail") === "on";
+
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return { error: "Invalid user." };
+  }
+  if (!confirmed) {
+    return { error: "Confirm deletion before continuing." };
+  }
+  if (userId === session.userId) {
+    return { error: "You can’t delete your own account." };
+  }
+
+  const user = await findUserById(userId);
+  if (!user) return { error: "User not found." };
+
+  if (notifyByEmail) {
+    try {
+      await sendAccountDeletedEmail({
+        toEmail: user.email,
+        fullName: user.full_name,
+      });
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not send the deletion email. User was not deleted.",
+      };
+    }
+  }
+
+  try {
+    await deleteUserById(userId);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Could not delete the user.",
+    };
+  }
+
+  revalidatePath("/client/admin");
+  redirect("/client/admin");
+}
+
+export async function adminDeleteOrganisation(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAdminSession();
+  if (!session) return { error: "Admin access required." };
+
+  const organisationId = Number(formData.get("organisationId"));
+  const confirmed = formData.get("confirmDelete") === "on";
+
+  if (!Number.isFinite(organisationId) || organisationId <= 0) {
+    return { error: "Invalid organisation." };
+  }
+  if (!confirmed) {
+    return { error: "Confirm deletion before continuing." };
+  }
+  if (organisationId === session.organisationId) {
+    return {
+      error:
+        "You can’t delete the organisation you’re currently signed into. Switch organisation first.",
+    };
+  }
+
+  const organisation = await findOrganisationById(organisationId);
+  if (!organisation) return { error: "Organisation not found." };
+
+  try {
+    await deleteOrganisationById(organisationId);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not delete the organisation.",
+    };
+  }
+
+  revalidatePath("/client/admin/organisations");
+  redirect("/client/admin/organisations");
+}
+
 export async function adminCreateUser(
   _prev: ActionState,
   formData: FormData,
@@ -1254,6 +1351,9 @@ export async function adminUpdateOrganisation(
   ).trim();
   const maintenanceIncludedInterval =
     maintenanceIntervalRaw === "year" ? "year" : "month";
+  const projectStatusRaw = String(formData.get("projectStatus") ?? "")
+    .trim()
+    .toLowerCase();
 
   let maintenanceIncludedAmountPence: number | null = null;
   if (maintenanceIncluded) {
@@ -1266,6 +1366,17 @@ export async function adminUpdateOrganisation(
     }
     maintenanceIncludedAmountPence = Math.round(pounds * 100);
   }
+
+  if (
+    projectStatusRaw !== "planning" &&
+    projectStatusRaw !== "design" &&
+    projectStatusRaw !== "development" &&
+    projectStatusRaw !== "changes" &&
+    projectStatusRaw !== "launch"
+  ) {
+    return { error: "Choose a valid organisation status." };
+  }
+  const projectStatus = projectStatusRaw;
 
   try {
     await updateOrganisationDetails({
@@ -1281,6 +1392,7 @@ export async function adminUpdateOrganisation(
       maintenanceIncludedInterval: maintenanceIncluded
         ? maintenanceIncludedInterval
         : null,
+      projectStatus,
     });
   } catch (error) {
     return {
@@ -1292,7 +1404,9 @@ export async function adminUpdateOrganisation(
   }
 
   revalidatePath(`/client/admin/organisations/${organisationId}`);
+  revalidatePath("/client/admin/status");
   revalidatePath("/client/dashboard");
+  revalidatePath("/client/status");
   return { ok: true };
 }
 

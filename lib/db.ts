@@ -43,6 +43,8 @@ export type DbOrganisation = {
   maintenance_included: number;
   maintenance_included_amount_pence: number | null;
   maintenance_included_interval: "month" | "year" | null;
+  /** Current project phase: planning | design | development | changes | launch */
+  project_status: string;
 };
 
 export type DbMembership = DbOrganisation & {

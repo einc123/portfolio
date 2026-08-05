@@ -11,12 +11,13 @@ import {
 import { useRouter } from "next/navigation";
 import {
   adminAddMemberToOrganisation,
+  adminDeleteOrganisation,
   adminRemoveOrganisationFromUser,
   adminUpdateOrganisation,
   type ActionState,
 } from "@/app/client/actions";
 import { displayInitials } from "@/lib/initials";
-import { site } from "@/lib/data";
+import { parseOrgProjectStatus, processSteps, site } from "@/lib/data";
 
 const initial: ActionState = {};
 
@@ -31,6 +32,7 @@ export type AdminOrgRow = {
   maintenance_included: boolean;
   maintenance_included_amount_pence: number | null;
   maintenance_included_interval: "month" | "year" | null;
+  project_status: "planning" | "design" | "development" | "changes" | "launch";
   members: {
     id: number;
     email: string;
@@ -75,6 +77,10 @@ export function AdminOrgManageForm({
     adminRemoveOrganisationFromUser,
     initial,
   );
+  const [deleteState, deleteAction, deletePending] = useActionState(
+    adminDeleteOrganisation,
+    initial,
+  );
 
   useRefreshOnSuccess(detailsState);
   useRefreshOnSuccess(addState);
@@ -89,6 +95,7 @@ export function AdminOrgManageForm({
       ? organisation.unmanaged_provider
       : "spaceship";
   const savedMaintenanceIncluded = Boolean(organisation.maintenance_included);
+  const savedProjectStatus = parseOrgProjectStatus(organisation.project_status);
 
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<"member" | "owner">("member");
@@ -101,6 +108,7 @@ export function AdminOrgManageForm({
   const [maintenanceIncluded, setMaintenanceIncluded] = useState(
     savedMaintenanceIncluded,
   );
+  const [projectStatus, setProjectStatus] = useState(savedProjectStatus);
 
   // React clears the form once a server action finishes, which puts the radio
   // elements back to their mount-time markup. Re-render so the controlled
@@ -114,7 +122,13 @@ export function AdminOrgManageForm({
     setHostingType(savedHostingType);
     setUnmanagedProvider(savedProvider);
     setMaintenanceIncluded(savedMaintenanceIncluded);
-  }, [savedHostingType, savedProvider, savedMaintenanceIncluded]);
+    setProjectStatus(savedProjectStatus);
+  }, [
+    savedHostingType,
+    savedProvider,
+    savedMaintenanceIncluded,
+    savedProjectStatus,
+  ]);
 
   useEffect(() => {
     if (addState.ok) setQuery("");
@@ -162,6 +176,7 @@ export function AdminOrgManageForm({
           String(savedMaintenanceIncluded),
           String(organisation.maintenance_included_amount_pence ?? ""),
           organisation.maintenance_included_interval ?? "",
+          savedProjectStatus,
         ].join("|")}
         action={detailsAction}
         className="space-y-4"
@@ -190,6 +205,43 @@ export function AdminOrgManageForm({
             className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
           />
         </label>
+        <fieldset className="space-y-3">
+          <legend className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            Organisation status
+          </legend>
+          <p className="text-sm text-muted">
+            Shown on the client dashboard and status page. Pick the phase this
+            project is in now.
+          </p>
+          <div className="space-y-2">
+            {processSteps.map((step, index) => (
+              <label
+                key={step.id}
+                className="flex cursor-pointer gap-3 border border-line bg-background px-4 py-3"
+              >
+                <input
+                  type="radio"
+                  name="projectStatus"
+                  value={step.id}
+                  checked={projectStatus === step.id}
+                  onChange={() => setProjectStatus(step.id)}
+                  className="mt-1"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm text-ink">
+                    <span className="text-accent">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>{" "}
+                    {step.title}
+                  </span>
+                  <span className="mt-1 block text-sm text-muted">
+                    {step.description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label className="block">
           <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
             Live website
@@ -526,6 +578,41 @@ export function AdminOrgManageForm({
           )}
           <Feedback state={addState} />
         </div>
+      </section>
+
+      <section className="border-t border-line pt-6">
+        <h2 className="font-display text-xl italic text-ink">
+          Delete organisation
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          Permanently removes this organisation, memberships, contracts, and
+          case study data. People themselves are not deleted. This cannot be
+          undone.
+        </p>
+        <form action={deleteAction} className="mt-4 space-y-3">
+          <input type="hidden" name="organisationId" value={organisation.id} />
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              name="confirmDelete"
+              type="checkbox"
+              required
+              className="mt-1 h-4 w-4"
+            />
+            <span>
+              I understand this permanently deletes {organisation.name}
+            </span>
+          </label>
+          {deleteState.error ? (
+            <p className="text-sm text-red-600">{deleteState.error}</p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={deletePending}
+            className="inline-flex min-h-11 items-center border border-red-600/40 px-5 text-sm text-red-700 disabled:opacity-60"
+          >
+            {deletePending ? "Deleting…" : "Delete organisation"}
+          </button>
+        </form>
       </section>
     </div>
   );
