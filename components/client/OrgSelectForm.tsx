@@ -33,8 +33,9 @@ export function OrgSelectForm({
         setPendingId(null);
         return;
       }
-      router.refresh();
+      // Navigate first so a slow refresh of this page cannot stall the transition.
       router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
+      router.refresh();
     });
   }
 

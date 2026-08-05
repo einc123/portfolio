@@ -14,6 +14,7 @@ import {
 import { findUserById, userHasBillingDetails } from "@/lib/auth/users";
 import { listCustomerBilling, getCustomerPaymentMethodSummary } from "@/lib/stripe/billing";
 import { PaymentMethodForm } from "@/components/client/PaymentMethodForm";
+import { withTimeout } from "@/lib/withTimeout";
 
 export const metadata: Metadata = {
   title: "Client profile",
@@ -48,7 +49,10 @@ export default async function ClientProfilePage() {
   > | null = null;
   if (user.stripe_customer_id) {
     try {
-      customerBilling = await listCustomerBilling(user.stripe_customer_id);
+      customerBilling = await withTimeout(
+        listCustomerBilling(user.stripe_customer_id),
+        8000,
+      );
     } catch (error) {
       customerBilling = {
         invoices: [],
@@ -59,8 +63,9 @@ export default async function ClientProfilePage() {
       };
     }
     try {
-      cardSummary = await getCustomerPaymentMethodSummary(
-        user.stripe_customer_id,
+      cardSummary = await withTimeout(
+        getCustomerPaymentMethodSummary(user.stripe_customer_id),
+        5000,
       );
     } catch {
       cardSummary = null;

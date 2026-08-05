@@ -21,6 +21,7 @@ import {
   getHourlyRatePence,
 } from "@/lib/settings/store";
 import { loadAssignedOrgBilling } from "@/lib/stripe/billing";
+import { withTimeout } from "@/lib/withTimeout";
 
 export const metadata: Metadata = {
   title: "Client dashboard",
@@ -64,7 +65,10 @@ export default async function ClientDashboardPage() {
     const customerIds = await listOrganisationMemberStripeCustomerIds(
       organisation.id,
     );
-    const billing = await loadAssignedOrgBilling(organisation.id, customerIds);
+    const billing = await withTimeout(
+      loadAssignedOrgBilling(organisation.id, customerIds),
+      10_000,
+    );
     invoices = billing.invoices;
     subscriptions = billing.subscriptions;
   } catch (error) {

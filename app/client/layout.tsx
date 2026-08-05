@@ -1,15 +1,11 @@
 import { BillingRequiredModal } from "@/components/client/BillingRequiredModal";
 import { ForcePasswordResetModal } from "@/components/client/ForcePasswordResetModal";
-import { PaymentMethodRequiredModal } from "@/components/client/PaymentMethodRequiredModal";
+import { PaymentMethodGate } from "@/components/client/PaymentMethodGate";
 import {
   readSession,
   requireOrganisationMembership,
 } from "@/lib/auth/session";
 import { findUserById, userHasBillingDetails } from "@/lib/auth/users";
-import {
-  customerHasDefaultPaymentMethod,
-  ensureStripeCustomerForUser,
-} from "@/lib/stripe/billing";
 
 export default async function ClientLayout({
   children,
@@ -18,7 +14,7 @@ export default async function ClientLayout({
 }) {
   let forcePasswordModal: React.ReactNode = null;
   let billingModal: React.ReactNode = null;
-  let paymentMethodModal: React.ReactNode = null;
+  let paymentMethodGate = false;
 
   try {
     const session = await readSession();
@@ -45,16 +41,9 @@ export default async function ClientLayout({
               />
             );
           } else {
-            try {
-              const customerId = await ensureStripeCustomerForUser(user);
-              const hasCard =
-                await customerHasDefaultPaymentMethod(customerId);
-              if (!hasCard) {
-                paymentMethodModal = <PaymentMethodRequiredModal />;
-              }
-            } catch {
-              // Don't lock the portal if Stripe is temporarily unreachable.
-            }
+            // Stripe is checked client-side so a hung Stripe call cannot
+            // block every /client page after org select.
+            paymentMethodGate = true;
           }
         }
       }
@@ -62,7 +51,7 @@ export default async function ClientLayout({
   } catch {
     forcePasswordModal = null;
     billingModal = null;
-    paymentMethodModal = null;
+    paymentMethodGate = false;
   }
 
   return (
@@ -72,7 +61,7 @@ export default async function ClientLayout({
       </div>
       {forcePasswordModal}
       {billingModal}
-      {paymentMethodModal}
+      {paymentMethodGate ? <PaymentMethodGate /> : null}
     </div>
   );
 }

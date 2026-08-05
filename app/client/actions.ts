@@ -45,6 +45,7 @@ import {
   createOrgInvoice,
   createOrgSubscription,
   createStripeCustomerForUser,
+  customerHasDefaultPaymentMethod,
   ensureStripeCustomerForUser,
   loadAssignedOrgBilling,
   pauseOrgSubscription,
@@ -95,6 +96,7 @@ import {
 } from "@/lib/hosting";
 import { isAccent } from "@/lib/accent";
 import { isTheme } from "@/lib/theme";
+import { withTimeout } from "@/lib/withTimeout";
 
 export type ActionState = {
   ok?: boolean;
@@ -659,6 +661,33 @@ export async function saveBillingDetails(
   }
 
   return { ok: true };
+}
+
+/** Non-blocking card gate for PaymentMethodGate — times out instead of hanging the UI. */
+export async function checkDefaultPaymentMethodRequired(): Promise<{
+  required: boolean;
+}> {
+  try {
+    const session = await readSession();
+    if (!session || session.pending2fa || session.pendingOrgSelect) {
+      return { required: false };
+    }
+    const active = session.organisationId ? session : null;
+    if (!active?.organisationId) return { required: false };
+
+    const user = await findUserById(session.userId);
+    if (!user || !userHasBillingDetails(user)) return { required: false };
+
+    if (!user.stripe_customer_id) return { required: true };
+
+    const hasCard = await withTimeout(
+      customerHasDefaultPaymentMethod(user.stripe_customer_id),
+      5000,
+    );
+    return { required: !hasCard };
+  } catch {
+    return { required: false };
+  }
 }
 
 export async function createPaymentMethodSetupSession(): Promise<

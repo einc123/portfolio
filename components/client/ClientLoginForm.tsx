@@ -57,13 +57,13 @@ export function ClientLoginForm({
         await handlePostLoginAppearance(result);
       }
       if (result.needsOrgSelect) {
-        router.refresh();
         router.push("/client/select-org");
+        router.refresh();
         return result;
       }
       if (result.ok) {
-        router.refresh();
         router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
+        router.refresh();
       }
       return result;
     },
@@ -77,13 +77,13 @@ export function ClientLoginForm({
         await handlePostLoginAppearance(result);
       }
       if (result.needsOrgSelect) {
-        router.refresh();
         router.push("/client/select-org");
+        router.refresh();
         return result;
       }
       if (result.ok) {
-        router.refresh();
         router.push(result.needsBilling ? "/client/profile" : "/client/dashboard");
+        router.refresh();
       }
       return result;
     },
@@ -136,8 +136,8 @@ export function ClientLoginForm({
           preferredTheme: verifyJson.preferredTheme as ActionState["preferredTheme"],
           preferredAccent: verifyJson.preferredAccent,
         });
-        router.refresh();
         router.push(verifyJson.redirectTo || "/client/dashboard");
+        router.refresh();
       } catch (error) {
         setPasskeyError(
           error instanceof Error ? error.message : "Passkey login was cancelled.",

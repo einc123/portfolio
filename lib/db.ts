@@ -223,6 +223,7 @@ async function remoteQuery<T extends Record<string, unknown>>(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ sql, params }),
+      signal: AbortSignal.timeout(15_000),
     },
   );
 

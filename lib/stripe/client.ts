@@ -24,7 +24,10 @@ export async function getStripe(): Promise<Stripe> {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
   assertKeyMatchesEnvironment(key);
-  stripe = new Stripe(key);
+  stripe = new Stripe(key, {
+    timeout: 10_000,
+    maxNetworkRetries: 1,
+  });
   return stripe;
 }
 
