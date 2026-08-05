@@ -160,6 +160,7 @@ export async function addMember(
 
 export async function inviteClientUser(input: {
   email: string;
+  fullName: string;
   inviteToken: string;
   expiresAt: Date;
   /** Create a new organisation with this name (invitee becomes owner). */
@@ -169,6 +170,7 @@ export async function inviteClientUser(input: {
   role?: "member" | "owner";
 }) {
   const email = input.email.toLowerCase();
+  const fullName = input.fullName.trim();
   let user = await findUserByEmail(email);
 
   if (user?.status === "active") {
@@ -180,11 +182,12 @@ export async function inviteClientUser(input: {
   if (!user) {
     const result = await execute(
       `INSERT INTO client_users
-        (email, status, invite_token, invite_expires_at)
+        (email, full_name, status, invite_token, invite_expires_at)
        VALUES
-        (:email, 'invited', :token, :expires)`,
+        (:email, :fullName, 'invited', :token, :expires)`,
       {
         email,
+        fullName,
         token: input.inviteToken,
         expires: input.expiresAt,
       },
@@ -193,13 +196,15 @@ export async function inviteClientUser(input: {
   } else {
     await execute(
       `UPDATE client_users
-       SET status = 'invited',
+       SET full_name = :fullName,
+           status = 'invited',
            invite_token = :token,
            invite_expires_at = :expires,
            updated_at = datetime('now')
        WHERE id = :id`,
       {
         id: user.id,
+        fullName,
         token: input.inviteToken,
         expires: input.expiresAt,
       },

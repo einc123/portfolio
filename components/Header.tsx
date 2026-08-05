@@ -171,7 +171,7 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
           </span>
         </div>
 
-        <div className="relative z-[60] flex shrink-0 items-center gap-3 sm:gap-3 md:gap-6">
+        <div className="relative z-[60] flex shrink-0 items-center gap-2 sm:gap-3 md:gap-6">
           {account ? (
             <>
               <Link

@@ -34,6 +34,7 @@ export default async function RegisterInvitePage({ params }: Props) {
         token={token}
         email={user.email}
         organisationName={organisation.name}
+        fullName={user.full_name ?? ""}
       />
     </>
   );

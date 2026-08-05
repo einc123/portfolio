@@ -10,10 +10,12 @@ export function RegisterForm({
   token,
   email,
   organisationName,
+  fullName = "",
 }: {
   token: string;
   email: string;
   organisationName: string;
+  fullName?: string;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(
@@ -40,6 +42,7 @@ export function RegisterForm({
         <input
           name="fullName"
           required
+          defaultValue={fullName}
           className="mt-2 w-full border border-line bg-surface px-4 py-3 text-ink outline-none focus:border-accent"
         />
       </label>

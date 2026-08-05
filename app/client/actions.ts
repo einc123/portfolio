@@ -377,6 +377,8 @@ export async function adminInviteClient(
     return { error: "Complete your billing details before inviting clients." };
   }
 
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
@@ -385,10 +387,17 @@ export async function adminInviteClient(
   const role =
     String(formData.get("role") ?? "member") === "owner" ? "owner" : "member";
 
+  if (!firstName) {
+    return { error: "Enter a first name." };
+  }
+  if (!lastName) {
+    return { error: "Enter a last name." };
+  }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Enter a valid email address." };
   }
 
+  const fullName = `${firstName} ${lastName}`.replace(/\s+/g, " ").trim();
   const inviteToken = randomToken(32);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 72);
 
@@ -401,6 +410,7 @@ export async function adminInviteClient(
       }
       invited = await inviteClientUser({
         email,
+        fullName,
         organisationId,
         role,
         inviteToken,
@@ -414,6 +424,7 @@ export async function adminInviteClient(
       }
       invited = await inviteClientUser({
         email,
+        fullName,
         organisationName,
         inviteToken,
         expiresAt,

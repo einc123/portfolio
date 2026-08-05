@@ -76,6 +76,31 @@ function InviteForm({ organisations }: { organisations: OrgOption[] }) {
 
   return (
     <form action={action} className="mt-5 space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            First name
+          </span>
+          <input
+            name="firstName"
+            required
+            autoComplete="given-name"
+            className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            Last name
+          </span>
+          <input
+            name="lastName"
+            required
+            autoComplete="family-name"
+            className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+          />
+        </label>
+      </div>
+
       <label className="block">
         <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
           Email
