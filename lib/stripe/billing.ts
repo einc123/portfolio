@@ -172,7 +172,13 @@ export async function getCustomerPaymentMethodSummary(customerId: string) {
   const stripe = await getStripe();
   const customer = await stripe.customers.retrieve(customerId);
   if (customer.deleted) {
-    return { hasPaymentMethod: false, brand: null as string | null, last4: null as string | null };
+    return {
+      hasPaymentMethod: false,
+      brand: null as string | null,
+      last4: null as string | null,
+      expMonth: null as number | null,
+      expYear: null as number | null,
+    };
   }
 
   let paymentMethodId =
@@ -190,7 +196,13 @@ export async function getCustomerPaymentMethodSummary(customerId: string) {
   }
 
   if (!paymentMethodId) {
-    return { hasPaymentMethod: false, brand: null, last4: null };
+    return {
+      hasPaymentMethod: false,
+      brand: null,
+      last4: null,
+      expMonth: null,
+      expYear: null,
+    };
   }
 
   const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
@@ -198,6 +210,8 @@ export async function getCustomerPaymentMethodSummary(customerId: string) {
     hasPaymentMethod: true,
     brand: pm.card?.brand ?? null,
     last4: pm.card?.last4 ?? null,
+    expMonth: pm.card?.exp_month ?? null,
+    expYear: pm.card?.exp_year ?? null,
   };
 }
 

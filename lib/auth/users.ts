@@ -151,17 +151,22 @@ export async function addMember(
   role: "member" | "owner" = "member",
 ) {
   await execute(
-    `INSERT OR IGNORE INTO client_organisation_members (user_id, organisation_id, role)
-     VALUES (:userId, :organisationId, :role)`,
+    `INSERT INTO client_organisation_members (user_id, organisation_id, role)
+     VALUES (:userId, :organisationId, :role)
+     ON CONFLICT(user_id, organisation_id) DO UPDATE SET role = excluded.role`,
     { userId, organisationId, role },
   );
 }
 
 export async function inviteClientUser(input: {
   email: string;
-  organisationName: string;
   inviteToken: string;
   expiresAt: Date;
+  /** Create a new organisation with this name (invitee becomes owner). */
+  organisationName?: string;
+  /** Attach to an existing organisation instead of creating one. */
+  organisationId?: number;
+  role?: "member" | "owner";
 }) {
   const email = input.email.toLowerCase();
   let user = await findUserByEmail(email);
@@ -204,10 +209,31 @@ export async function inviteClientUser(input: {
 
   if (!user) throw new Error("Failed to create invited user.");
 
-  const org = await createOrganisation(input.organisationName);
-  await addMember(user.id, org.id, "owner");
+  let organisation: DbOrganisation;
+  if (input.organisationId) {
+    const existing = await findOrganisationById(input.organisationId);
+    if (!existing) {
+      throw new Error("That organisation doesn’t exist.");
+    }
+    organisation = existing;
+    await addMember(
+      user.id,
+      Number(existing.id),
+      input.role === "owner" ? "owner" : "member",
+    );
+  } else {
+    const name = input.organisationName?.trim() ?? "";
+    if (name.length < 2) {
+      throw new Error("Enter an organisation name or choose an existing one.");
+    }
+    const created = await createOrganisation(name);
+    await addMember(user.id, created.id, "owner");
+    const full = await findOrganisationById(created.id);
+    if (!full) throw new Error("Organisation was created but could not be loaded.");
+    organisation = full;
+  }
 
-  return { user, organisation: org };
+  return { user, organisation };
 }
 
 export async function completeInviteRegistration(input: {

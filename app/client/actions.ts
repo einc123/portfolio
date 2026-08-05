@@ -97,6 +97,7 @@ import {
 import { isAccent } from "@/lib/accent";
 import { isTheme } from "@/lib/theme";
 import { withTimeout } from "@/lib/withTimeout";
+import { getRuntimeEnv } from "@/lib/runtimeEnv";
 
 export type ActionState = {
   ok?: boolean;
@@ -383,12 +384,12 @@ export async function adminInviteClient(
     .trim()
     .toLowerCase();
   const organisationName = String(formData.get("organisationName") ?? "").trim();
+  const organisationIdRaw = String(formData.get("organisationId") ?? "").trim();
+  const role =
+    String(formData.get("role") ?? "member") === "owner" ? "owner" : "member";
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Enter a valid email address." };
-  }
-  if (!organisationName || organisationName.length < 2) {
-    return { error: "Enter an organisation name." };
   }
 
   const inviteToken = randomToken(32);
@@ -396,12 +397,31 @@ export async function adminInviteClient(
 
   let invited: Awaited<ReturnType<typeof inviteClientUser>>;
   try {
-    invited = await inviteClientUser({
-      email,
-      organisationName,
-      inviteToken,
-      expiresAt,
-    });
+    if (organisationIdRaw) {
+      const organisationId = Number(organisationIdRaw);
+      if (!Number.isFinite(organisationId) || organisationId <= 0) {
+        return { error: "Choose a valid organisation." };
+      }
+      invited = await inviteClientUser({
+        email,
+        organisationId,
+        role,
+        inviteToken,
+        expiresAt,
+      });
+    } else {
+      if (!organisationName || organisationName.length < 2) {
+        return {
+          error: "Choose an existing organisation or enter a new name.",
+        };
+      }
+      invited = await inviteClientUser({
+        email,
+        organisationName,
+        inviteToken,
+        expiresAt,
+      });
+    }
   } catch (error) {
     return {
       error:
@@ -409,8 +429,11 @@ export async function adminInviteClient(
     };
   }
 
-  const baseUrl = process.env.WEBAUTHN_ORIGIN?.trim() || site.url;
-  const inviteUrl = `${baseUrl}/client/register/${inviteToken}`;
+  const baseUrl =
+    (await getRuntimeEnv("WEBAUTHN_ORIGIN")) ||
+    process.env.WEBAUTHN_ORIGIN?.trim() ||
+    site.url;
+  const inviteUrl = `${baseUrl.replace(/\/$/, "")}/client/register/${inviteToken}`;
 
   try {
     await sendClientInviteEmail({
@@ -1136,7 +1159,11 @@ export async function adminCreateUser(
       if (!existingOrg) {
         return { error: "That organisation doesn’t exist." };
       }
-      await addMember(user.id, Number(existingOrg.id), "member");
+      const role =
+        String(formData.get("role") ?? "member") === "owner"
+          ? "owner"
+          : "member";
+      await addMember(user.id, Number(existingOrg.id), role);
     } else if (organisationName.length >= 2) {
       const org = await createOrganisation(organisationName);
       await addMember(user.id, org.id, "owner");

@@ -21,7 +21,7 @@ export function ThemeToggle({
       aria-label="Open theme settings"
       title="Theme"
     >
-      <span className="hidden transition-opacity group-hover:opacity-70 min-[380px]:inline">
+      <span className="hidden transition-opacity group-hover:opacity-70 sm:inline">
         Theme
       </span>
       <span className="relative h-4 w-4" aria-hidden>

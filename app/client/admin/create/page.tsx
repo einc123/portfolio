@@ -37,7 +37,7 @@ export default async function ClientAdminCreatePage() {
   return (
     <AdminShell
       title="Create."
-      description="Invite or create users, or add a standalone organisation you can assign people to later."
+      description="Invite or create users — assign them to an existing organisation or spin up a new one."
     >
       <AdminCreateUsers
         organisations={organisations.map((org) => ({

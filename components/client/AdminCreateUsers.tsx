@@ -38,10 +38,10 @@ export function AdminCreateUsers({
       <section className="border border-line bg-surface p-5 sm:p-6">
         <h2 className="font-display text-2xl italic text-ink">Invite user</h2>
         <p className="mt-2 text-sm text-muted">
-          Creates an organisation and emails a registration link. They finish
-          setup themselves.
+          Emails a registration link. Assign them to an existing organisation as
+          a member or owner, or create a new organisation for them.
         </p>
-        <InviteForm />
+        <InviteForm organisations={organisations} />
       </section>
 
       <section className="border border-line bg-surface p-5 sm:p-6">
@@ -67,8 +67,11 @@ export function AdminCreateUsers({
   );
 }
 
-function InviteForm() {
+function InviteForm({ organisations }: { organisations: OrgOption[] }) {
   const [state, action, pending] = useActionState(adminInviteClient, initial);
+  const [orgMode, setOrgMode] = useState<"existing" | "new">(
+    organisations.length > 0 ? "existing" : "new",
+  );
   useRefreshOnSuccess(state);
 
   return (
@@ -84,16 +87,84 @@ function InviteForm() {
           className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
         />
       </label>
-      <label className="block">
-        <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
-          Organisation name
-        </span>
-        <input
-          name="organisationName"
-          required
-          className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
-        />
-      </label>
+
+      <fieldset className="space-y-2">
+        <legend className="text-[11px] uppercase tracking-[0.16em] text-faint">
+          Organisation
+        </legend>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="radio"
+            name="orgModeRadio"
+            checked={orgMode === "existing"}
+            disabled={organisations.length === 0}
+            onChange={() => setOrgMode("existing")}
+          />
+          Assign to existing
+        </label>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="radio"
+            name="orgModeRadio"
+            checked={orgMode === "new"}
+            onChange={() => setOrgMode("new")}
+          />
+          Create new organisation
+        </label>
+      </fieldset>
+
+      {orgMode === "existing" ? (
+        <>
+          <label className="block">
+            <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+              Existing organisation
+            </span>
+            <select
+              name="organisationId"
+              required
+              defaultValue=""
+              className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+            >
+              <option value="" disabled>
+                Choose organisation
+              </option>
+              {organisations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+              Role
+            </span>
+            <select
+              name="role"
+              defaultValue="member"
+              className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+            >
+              <option value="member">Member</option>
+              <option value="owner">Owner</option>
+            </select>
+          </label>
+        </>
+      ) : (
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            New organisation name
+          </span>
+          <input
+            name="organisationName"
+            required
+            className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+          />
+          <span className="mt-1 block text-xs text-faint">
+            They’ll be added as the organisation owner.
+          </span>
+        </label>
+      )}
+
       <Feedback state={state} />
       <button
         type="submit"
@@ -111,6 +182,7 @@ function CreateForm({ organisations }: { organisations: OrgOption[] }) {
   const [stripeMode, setStripeMode] = useState<"none" | "create" | "assign">(
     "none",
   );
+  const [organisationId, setOrganisationId] = useState("");
   useRefreshOnSuccess(state);
 
   return (
@@ -154,7 +226,8 @@ function CreateForm({ organisations }: { organisations: OrgOption[] }) {
         </span>
         <select
           name="organisationId"
-          defaultValue=""
+          value={organisationId}
+          onChange={(event) => setOrganisationId(event.target.value)}
           className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
         >
           <option value="">None — or create below</option>
@@ -165,15 +238,31 @@ function CreateForm({ organisations }: { organisations: OrgOption[] }) {
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
-          Or new organisation name
-        </span>
-        <input
-          name="organisationName"
-          className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
-        />
-      </label>
+      {organisationId ? (
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            Role
+          </span>
+          <select
+            name="role"
+            defaultValue="member"
+            className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+          >
+            <option value="member">Member</option>
+            <option value="owner">Owner</option>
+          </select>
+        </label>
+      ) : (
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            Or new organisation name
+          </span>
+          <input
+            name="organisationName"
+            className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
+          />
+        </label>
+      )}
       <fieldset className="space-y-2">
         <legend className="text-[11px] uppercase tracking-[0.16em] text-faint">
           Stripe customer

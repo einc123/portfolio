@@ -136,6 +136,18 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
 
   const frosted = scrolled && !open;
 
+  const orgDashboardHref =
+    account?.organisationName === "Choose organisation"
+      ? "/client/select-org"
+      : "/client/dashboard";
+
+  const accountChipClass = (isOpen: boolean) =>
+    `box-border inline-flex h-9 items-center border px-2.5 text-[11px] font-medium leading-none tracking-wide transition-colors sm:px-3 sm:text-[12px] ${
+      isOpen
+        ? "border-white/25 bg-white/10 text-white hover:bg-white/15"
+        : "border-line bg-surface text-ink hover:border-accent"
+    }`;
+
   return (
     <header
       className={`sticky top-0 z-40 pt-[env(safe-area-inset-top)] transition-[background-color,backdrop-filter,border-color,box-shadow] duration-300 ${
@@ -144,32 +156,28 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
           : "border-b border-transparent bg-transparent"
       }`}
     >
-      <div
-        className="page-pad mx-auto flex w-full max-w-6xl items-center justify-between gap-3 py-3.5 sm:py-4 md:py-5"
-      >
-        <div className="relative z-[60] flex min-w-0 shrink items-center gap-2.5 sm:gap-3">
+      <div className="page-pad mx-auto flex w-full max-w-6xl items-center justify-between gap-2 py-3.5 sm:gap-3 sm:py-4 md:py-5">
+        <div className="relative z-[60] flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <Link
             href="/"
-            className={`min-w-0 font-brand text-[13px] font-semibold tracking-tight transition-colors duration-300 hover:opacity-70 sm:text-[15px] md:text-base ${
+            className={`min-w-0 truncate font-brand text-[13px] font-semibold tracking-tight transition-colors duration-300 hover:opacity-70 sm:text-[15px] md:text-base ${
               open ? "text-white" : "text-ink"
             }`}
           >
             {site.brand}
           </Link>
-          <DiscordPresence inverted={open} />
+          <span className="hidden min-[480px]:inline-flex">
+            <DiscordPresence inverted={open} />
+          </span>
         </div>
 
-        <div className="relative z-[60] flex shrink-0 items-center gap-2 sm:gap-4 md:gap-6">
+        <div className="relative z-[60] flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-6">
           {account ? (
-            <div className="flex max-w-[min(100vw-11rem,28rem)] items-center gap-1.5 sm:gap-2">
+            <div className="hidden items-center gap-1.5 md:flex md:gap-2">
               <Link
                 href="/client/profile"
                 onClick={() => setOpen(false)}
-                className={`box-border inline-flex h-9 max-w-[9.5rem] items-center truncate border px-2.5 text-[11px] font-medium leading-none tracking-wide transition-colors sm:max-w-[12rem] sm:px-3 sm:text-[12px] ${
-                  open
-                    ? "border-white/25 bg-white/10 text-white hover:bg-white/15"
-                    : "border-line bg-surface text-ink hover:border-accent"
-                }`}
+                className={`${accountChipClass(open)} max-w-[12rem] truncate`}
                 title={account.name}
               >
                 <span className="truncate">{account.name}</span>
@@ -182,13 +190,9 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
                 }`}
               >
                 <Link
-                  href={
-                    account.organisationName === "Choose organisation"
-                      ? "/client/select-org"
-                      : "/client/dashboard"
-                  }
+                  href={orgDashboardHref}
                   onClick={() => setOpen(false)}
-                  className="min-w-0 max-w-[7.5rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:max-w-[11rem] sm:text-[12px]"
+                  className="min-w-0 max-w-[11rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:text-[12px]"
                   title={account.organisationName}
                 >
                   {account.organisationName}
@@ -224,11 +228,8 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
               title="Client login"
               onClick={() => setOpen(false)}
             >
-              <span className="hidden transition-opacity group-hover:opacity-70 min-[420px]:inline">
+              <span className="hidden transition-opacity group-hover:opacity-70 sm:inline">
                 Client login
-              </span>
-              <span className="transition-opacity group-hover:opacity-70 min-[420px]:hidden">
-                Client
               </span>
               <span className="relative h-4 w-4 shrink-0" aria-hidden>
                 <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
@@ -257,9 +258,10 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
             }`}
             aria-expanded={open}
             aria-controls={menuId}
+            aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((value) => !value)}
           >
-            <span className="transition-opacity group-hover:opacity-70">
+            <span className="hidden transition-opacity group-hover:opacity-70 min-[380px]:inline">
               {open ? "Close" : "Menu"}
             </span>
             <span className="relative h-4 w-4 shrink-0" aria-hidden>
@@ -313,10 +315,53 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
         </div>
 
         <div className="menu-overlay__scroll relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[calc(4.25rem+env(safe-area-inset-top))] sm:px-6 md:px-10 md:pb-8 md:pt-[calc(5.75rem+env(safe-area-inset-top))]">
-          <div className="menu-overlay__meta shrink-0">
+          <div className="menu-overlay__meta shrink-0 space-y-4">
             <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
               Navigation
             </p>
+
+            {account ? (
+              <div className="flex flex-col gap-2 border border-white/10 bg-white/[0.04] p-3 md:hidden">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-white/35">
+                  Account
+                </p>
+                <Link
+                  href="/client/profile"
+                  onClick={() => setOpen(false)}
+                  className="truncate text-sm text-white/90 transition-colors hover:text-white"
+                  tabIndex={open ? 0 : -1}
+                >
+                  {account.name}
+                </Link>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Link
+                    href={orgDashboardHref}
+                    onClick={() => setOpen(false)}
+                    className="min-w-0 flex-1 truncate text-sm text-white/70 transition-colors hover:text-white"
+                    tabIndex={open ? 0 : -1}
+                  >
+                    {account.organisationName}
+                  </Link>
+                  <Link
+                    href="/client/select-org"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex shrink-0 items-center gap-1.5 border border-white/15 px-2.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                    tabIndex={open ? 0 : -1}
+                  >
+                    Switch
+                    <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
+                      <path
+                        d="M4.5 5.5 8 2.5l3.5 3M11.5 10.5 8 13.5l-3.5-3"
+                        stroke="currentColor"
+                        strokeWidth="1.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <nav
@@ -341,7 +386,7 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
                     0{index + 1}
                   </span>
                   <span
-                    className={`min-w-0 font-display text-[clamp(2.4rem,11vw,6.5rem)] leading-[0.95] italic transition-colors ${
+                    className={`min-w-0 break-words font-display text-[clamp(2.1rem,10vw,6.5rem)] leading-[0.95] italic transition-colors ${
                       active
                         ? "text-[var(--menu-active)]"
                         : "text-white group-hover:text-[var(--menu-active)]"
