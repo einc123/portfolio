@@ -378,15 +378,16 @@ export function mapSubscription(sub: Stripe.Subscription): PortalSubscription {
 export async function listCustomerBilling(customerId: string) {
   const stripe = await getStripe();
 
+  // Keep portal lists small — 100×4 was slow even when Stripe is healthy.
   const [invoicesResult, chargesResult, paymentIntentsResult, subscriptionsResult] =
     await Promise.allSettled([
-      stripe.invoices.list({ customer: customerId, limit: 100 }),
-      stripe.charges.list({ customer: customerId, limit: 100 }),
-      stripe.paymentIntents.list({ customer: customerId, limit: 100 }),
+      stripe.invoices.list({ customer: customerId, limit: 25 }),
+      stripe.charges.list({ customer: customerId, limit: 25 }),
+      stripe.paymentIntents.list({ customer: customerId, limit: 25 }),
       stripe.subscriptions.list({
         customer: customerId,
         status: "all",
-        limit: 100,
+        limit: 25,
         expand: ["data.items.data.price"],
       }),
     ]);
@@ -866,7 +867,7 @@ export async function loadAssignedOrgBilling(
     try {
       const listed = await stripe.invoices.list({
         subscription: subscriptionId,
-        limit: 100,
+        limit: 25,
       });
       for (const invoice of listed.data) {
         invoices.set(invoice.id, mapInvoice(invoice));
@@ -876,62 +877,67 @@ export async function loadAssignedOrgBilling(
     }
   }
 
-  for (const row of assignments) {
-    try {
-      if (row.stripe_object_type === "invoice") {
-        const invoice = await stripe.invoices.retrieve(row.stripe_object_id);
-        invoices.set(invoice.id, mapInvoice(invoice));
-      } else if (row.stripe_object_type === "subscription") {
-        await loadSubscription(row.stripe_object_id);
-      } else if (row.stripe_object_type === "charge") {
-        const charge = await stripe.charges.retrieve(row.stripe_object_id);
-        payments.set(charge.id, mapCharge(charge));
-      } else if (row.stripe_object_type === "payment_intent") {
-        const pi = await stripe.paymentIntents.retrieve(row.stripe_object_id);
-        payments.set(pi.id, {
-          id: pi.id,
-          amount: pi.amount,
-          currency: pi.currency,
-          status: pi.status,
-          created: pi.created,
-          description: pi.description,
-          receiptUrl: null,
-          organisationId: orgMeta(pi.metadata),
-        });
+  // Assignments first (usually few objects), then member customers in parallel.
+  await Promise.all(
+    assignments.map(async (row) => {
+      try {
+        if (row.stripe_object_type === "invoice") {
+          const invoice = await stripe.invoices.retrieve(row.stripe_object_id);
+          invoices.set(invoice.id, mapInvoice(invoice));
+        } else if (row.stripe_object_type === "subscription") {
+          await loadSubscription(row.stripe_object_id);
+        } else if (row.stripe_object_type === "charge") {
+          const charge = await stripe.charges.retrieve(row.stripe_object_id);
+          payments.set(charge.id, mapCharge(charge));
+        } else if (row.stripe_object_type === "payment_intent") {
+          const pi = await stripe.paymentIntents.retrieve(row.stripe_object_id);
+          payments.set(pi.id, {
+            id: pi.id,
+            amount: pi.amount,
+            currency: pi.currency,
+            status: pi.status,
+            created: pi.created,
+            description: pi.description,
+            receiptUrl: null,
+            organisationId: orgMeta(pi.metadata),
+          });
+        }
+      } catch {
+        // Object may have been deleted in Stripe — skip.
       }
-    } catch {
-      // Object may have been deleted in Stripe — skip.
-    }
-  }
+    }),
+  );
 
   const uniqueCustomers = [...new Set(memberCustomerIds.filter(Boolean))];
-  for (const customerId of uniqueCustomers) {
-    const billing = await listCustomerBilling(customerId);
-    for (const invoice of billing.invoices) {
-      if (
-        invoice.organisationId === orgKey ||
-        assignments.some((row) => row.stripe_object_id === invoice.id)
-      ) {
-        invoices.set(invoice.id, invoice);
+  await Promise.all(
+    uniqueCustomers.map(async (customerId) => {
+      const billing = await listCustomerBilling(customerId);
+      for (const invoice of billing.invoices) {
+        if (
+          invoice.organisationId === orgKey ||
+          assignments.some((row) => row.stripe_object_id === invoice.id)
+        ) {
+          invoices.set(invoice.id, invoice);
+        }
       }
-    }
-    for (const payment of billing.payments) {
-      if (
-        payment.organisationId === orgKey ||
-        assignments.some((row) => row.stripe_object_id === payment.id)
-      ) {
-        payments.set(payment.id, payment);
+      for (const payment of billing.payments) {
+        if (
+          payment.organisationId === orgKey ||
+          assignments.some((row) => row.stripe_object_id === payment.id)
+        ) {
+          payments.set(payment.id, payment);
+        }
       }
-    }
-    for (const subscription of billing.subscriptions) {
-      if (
-        subscription.organisationId === orgKey ||
-        assignments.some((row) => row.stripe_object_id === subscription.id)
-      ) {
-        subscriptions.set(subscription.id, subscription);
+      for (const subscription of billing.subscriptions) {
+        if (
+          subscription.organisationId === orgKey ||
+          assignments.some((row) => row.stripe_object_id === subscription.id)
+        ) {
+          subscriptions.set(subscription.id, subscription);
+        }
       }
-    }
-  }
+    }),
+  );
 
   // Pull every invoice that belongs to an organisation subscription
   // (first invoice, renewals, and any not yet assigned by id).

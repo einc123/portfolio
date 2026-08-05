@@ -24,8 +24,11 @@ export async function getStripe(): Promise<Stripe> {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
   assertKeyMatchesEnvironment(key);
+  // Workers have no node:https — without FetchHttpClient, Stripe calls hang
+  // until they time out (see OpenNext Stripe howto).
   stripe = new Stripe(key, {
-    timeout: 10_000,
+    httpClient: Stripe.createFetchHttpClient(),
+    timeout: 12_000,
     maxNetworkRetries: 1,
   });
   return stripe;

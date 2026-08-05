@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { AddPasskeyButton } from "@/components/client/AddPasskeyButton";
 import { BillingDetailsForm } from "@/components/client/BillingDetailsForm";
 import { ClientPortalHero } from "@/components/client/ClientPortalHero";
-import { ProfileBillingHistory } from "@/components/client/ProfileBillingHistory";
 import { ProfileNameForm } from "@/components/client/ProfileNameForm";
+import { ProfileStripeSuspended } from "@/components/client/ProfileStripeSuspended";
 import { TotpSetupForm } from "@/components/client/TotpSetupForm";
 import { ViewInvoicesButton } from "@/components/client/ViewInvoicesButton";
 import {
@@ -12,9 +12,6 @@ import {
   requireOrganisationMembership,
 } from "@/lib/auth/session";
 import { findUserById, userHasBillingDetails } from "@/lib/auth/users";
-import { listCustomerBilling, getCustomerPaymentMethodSummary } from "@/lib/stripe/billing";
-import { PaymentMethodForm } from "@/components/client/PaymentMethodForm";
-import { withTimeout } from "@/lib/withTimeout";
 
 export const metadata: Metadata = {
   title: "Client profile",
@@ -37,40 +34,6 @@ export default async function ClientProfilePage() {
 
   const billingReady = userHasBillingDetails(user);
   const totpEnabled = Boolean(user.totp_enabled);
-
-  let customerBilling: Awaited<ReturnType<typeof listCustomerBilling>> = {
-    invoices: [],
-    payments: [],
-    subscriptions: [],
-    error: null,
-  };
-  let cardSummary: Awaited<
-    ReturnType<typeof getCustomerPaymentMethodSummary>
-  > | null = null;
-  if (user.stripe_customer_id) {
-    try {
-      customerBilling = await withTimeout(
-        listCustomerBilling(user.stripe_customer_id),
-        8000,
-      );
-    } catch (error) {
-      customerBilling = {
-        invoices: [],
-        payments: [],
-        subscriptions: [],
-        error:
-          error instanceof Error ? error.message : "Stripe request failed.",
-      };
-    }
-    try {
-      cardSummary = await withTimeout(
-        getCustomerPaymentMethodSummary(user.stripe_customer_id),
-        5000,
-      );
-    } catch {
-      cardSummary = null;
-    }
-  }
 
   return (
     <>
@@ -118,31 +81,9 @@ export default async function ClientProfilePage() {
         />
       </section>
 
-      {billingReady ? (
-        <section className="mt-8 border border-line bg-surface px-5 py-6 sm:px-6">
-          <h2 className="font-display text-2xl italic text-ink">
-            Subscription card
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Bank card used for maintenance and other Stripe subscriptions. Saved
-            securely with Stripe — not stored on this site.
-          </p>
-          <PaymentMethodForm
-            currentCard={
-              cardSummary?.hasPaymentMethod
-                ? { brand: cardSummary.brand, last4: cardSummary.last4 }
-                : null
-            }
-          />
-        </section>
-      ) : null}
-
-      <ProfileBillingHistory
-        linked={Boolean(user.stripe_customer_id)}
-        invoices={customerBilling.invoices}
-        payments={customerBilling.payments}
-        subscriptions={customerBilling.subscriptions}
-        error={customerBilling.error}
+      <ProfileStripeSuspended
+        customerId={user.stripe_customer_id}
+        billingReady={billingReady}
       />
 
       {billingReady ? (
