@@ -317,20 +317,9 @@ export function AdminOrgBillingPanel({
               />
             </label>
           </div>
-          <label className="block">
-            <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
-              Days until due
-            </span>
-            <input
-              name="daysUntilDue"
-              type="number"
-              min="1"
-              defaultValue={14}
-              className="mt-2 w-full border border-line bg-background px-4 py-3 text-ink outline-none focus:border-accent"
-            />
-          </label>
           <p className="text-sm text-muted">
-            The billed person is emailed a Stripe payment link automatically.
+            Due in 30 days. Stripe and the portal email the billed person a
+            hosted payment link automatically.
           </p>
           <Feedback state={invoiceState} />
           <button
@@ -417,8 +406,8 @@ export function AdminOrgBillingPanel({
             />
           </label>
           <p className="text-sm text-muted">
-            The billed person is emailed a Stripe payment link for the first
-            invoice.
+            The first invoice is due in 30 days and emailed as a Stripe-hosted
+            payment link. Future renewal invoices are emailed by Stripe.
           </p>
           <Feedback state={subState} />
           <button
@@ -439,8 +428,8 @@ export function AdminOrgBillingPanel({
           Create maintenance subscription
         </h3>
         <p className="text-sm text-muted">
-          Separate from standard org subscriptions. The billed person is emailed
-          a Stripe payment link for the first invoice.
+          Separate from standard org subscriptions. The first invoice is due in
+          30 days and emailed as a Stripe-hosted payment link.
         </p>
         <input type="hidden" name="organisationId" value={organisationId} />
         <input type="hidden" name="kind" value="maintenance" />

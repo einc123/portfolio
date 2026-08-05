@@ -17,6 +17,7 @@ export async function sendMaintenanceRequestEmail(input: {
   subject: string;
   details: string;
   hasActiveMaintenance: boolean;
+  coverageKind?: "stripe" | "included" | "none";
   hourlyRateLabel: string;
   subscriptionId?: string | null;
 }) {
@@ -32,9 +33,17 @@ export async function sendMaintenanceRequestEmail(input: {
   }
 
   const who = input.requesterName?.trim() || input.requesterEmail;
-  const coverage = input.hasActiveMaintenance
-    ? "Active maintenance subscription — cover if it falls under the Maintenance Subscription Contract"
-    : `No active maintenance subscription — billable at ${input.hourlyRateLabel}/hour`;
+  const kind = input.coverageKind
+    ? input.coverageKind
+    : input.hasActiveMaintenance
+      ? "stripe"
+      : "none";
+  const coverage =
+    kind === "stripe"
+      ? "Active maintenance subscription — cover if it falls under the Maintenance Subscription Contract"
+      : kind === "included"
+        ? "Maintenance plan already included (not billed via Stripe) — cover if it falls under the Maintenance Subscription Contract"
+        : `No active maintenance plan — billable at ${input.hourlyRateLabel}/hour`;
 
   const mailSubject = `Maintenance request · ${input.subject}`;
   const lines = [

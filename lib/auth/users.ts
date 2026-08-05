@@ -468,6 +468,9 @@ export async function updateOrganisationDetails(input: {
   unmanagedProvider?: "verpex" | "spaceship" | "other" | null;
   hostingUrl?: string | null;
   websiteUrl?: string | null;
+  maintenanceIncluded?: boolean;
+  maintenanceIncludedAmountPence?: number | null;
+  maintenanceIncludedInterval?: "month" | "year" | null;
 }) {
   if (input.name !== undefined) {
     await renameOrganisation(input.organisationId, input.name);
@@ -512,6 +515,27 @@ export async function updateOrganisationDetails(input: {
           ? null
           : (input.unmanagedProvider ?? null),
         hostingUrl: isManaged ? null : (input.hostingUrl ?? null),
+      },
+    );
+  }
+  if (input.maintenanceIncluded !== undefined) {
+    const included = Boolean(input.maintenanceIncluded);
+    await execute(
+      `UPDATE client_organisations
+       SET maintenance_included = :included,
+           maintenance_included_amount_pence = :amountPence,
+           maintenance_included_interval = :interval,
+           updated_at = datetime('now')
+       WHERE id = :id`,
+      {
+        id: input.organisationId,
+        included: included ? 1 : 0,
+        amountPence: included
+          ? (input.maintenanceIncludedAmountPence ?? null)
+          : null,
+        interval: included
+          ? (input.maintenanceIncludedInterval ?? null)
+          : null,
       },
     );
   }

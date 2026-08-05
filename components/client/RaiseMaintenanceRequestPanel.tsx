@@ -10,10 +10,12 @@ const initial: ActionState = {};
 
 export function RaiseMaintenanceRequestPanel({
   hasActiveMaintenance,
+  coverageKind = "none",
   hourlyRateLabel,
   subscriptionId,
 }: {
   hasActiveMaintenance: boolean;
+  coverageKind?: "stripe" | "included" | "none";
   hourlyRateLabel: string;
   subscriptionId?: string | null;
 }) {
@@ -42,16 +44,24 @@ export function RaiseMaintenanceRequestPanel({
         Raise a maintenance request
       </h2>
 
-      {hasActiveMaintenance ? (
+      {coverageKind === "stripe" ||
+      (hasActiveMaintenance && coverageKind !== "included") ? (
         <p className="mt-3 text-sm leading-relaxed text-ink">
           You have an active maintenance subscription. If your request falls
           under maintenance as specified in the Maintenance Subscription
           Contract, it will be handled under that subscription. Work outside
           the contract scope may be quoted separately.
         </p>
+      ) : coverageKind === "included" ? (
+        <p className="mt-3 text-sm leading-relaxed text-ink">
+          You have a maintenance plan already included for this organisation.
+          If your request falls under maintenance as specified in the
+          Maintenance Subscription Contract, it will be handled under that plan.
+          Work outside the contract scope may be quoted separately.
+        </p>
       ) : (
         <p className="mt-3 text-sm leading-relaxed text-ink">
-          You don&apos;t have an active maintenance subscription. Any requested
+          You don&apos;t have an active maintenance plan. Any requested
           maintenance is subject to hourly rates, which are currently{" "}
           <span className="font-medium">{hourlyRateLabel}</span> per hour
           (plus any agreed materials or third-party costs).
@@ -67,6 +77,7 @@ export function RaiseMaintenanceRequestPanel({
           name="hasActiveMaintenance"
           value={hasActiveMaintenance ? "1" : "0"}
         />
+        <input type="hidden" name="coverageKind" value={coverageKind} />
 
         <label className="block">
           <span className="text-[11px] uppercase tracking-[0.16em] text-faint">

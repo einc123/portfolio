@@ -39,6 +39,10 @@ export type DbOrganisation = {
   unmanaged_provider: "verpex" | "spaceship" | "other" | null;
   hosting_url: string | null;
   website_url: string | null;
+  /** 1 when a paid plan is already included (not billed via Stripe). */
+  maintenance_included: number;
+  maintenance_included_amount_pence: number | null;
+  maintenance_included_interval: "month" | "year" | null;
 };
 
 export type DbMembership = DbOrganisation & {

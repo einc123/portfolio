@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   adminAddMemberToOrganisation,
@@ -21,6 +28,9 @@ export type AdminOrgRow = {
   unmanaged_provider: "verpex" | "spaceship" | "other" | null;
   hosting_url: string | null;
   website_url: string | null;
+  maintenance_included: boolean;
+  maintenance_included_amount_pence: number | null;
+  maintenance_included_interval: "month" | "year" | null;
   members: {
     id: number;
     email: string;
@@ -70,20 +80,41 @@ export function AdminOrgManageForm({
   useRefreshOnSuccess(addState);
   useRefreshOnSuccess(removeState);
 
+  const savedHostingType =
+    organisation.hosting_type === "managed" ? "managed" : "unmanaged";
+  const savedProvider =
+    organisation.unmanaged_provider === "verpex" ||
+    organisation.unmanaged_provider === "spaceship" ||
+    organisation.unmanaged_provider === "other"
+      ? organisation.unmanaged_provider
+      : "spaceship";
+  const savedMaintenanceIncluded = Boolean(organisation.maintenance_included);
+
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<"member" | "owner">("member");
   const [hostingType, setHostingType] = useState<"managed" | "unmanaged">(
-    organisation.hosting_type === "managed" ? "managed" : "unmanaged",
+    savedHostingType,
   );
   const [unmanagedProvider, setUnmanagedProvider] = useState<
     "verpex" | "spaceship" | "other"
-  >(
-    organisation.unmanaged_provider === "verpex" ||
-      organisation.unmanaged_provider === "spaceship" ||
-      organisation.unmanaged_provider === "other"
-      ? organisation.unmanaged_provider
-      : "spaceship",
+  >(savedProvider);
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(
+    savedMaintenanceIncluded,
   );
+
+  // React clears the form once a server action finishes, which puts the radio
+  // elements back to their mount-time markup. Re-render so the controlled
+  // checked state is written to the DOM again.
+  const [, resyncInputs] = useReducer((tick: number) => tick + 1, 0);
+  useEffect(() => {
+    resyncInputs();
+  }, [detailsState, addState, removeState]);
+
+  useEffect(() => {
+    setHostingType(savedHostingType);
+    setUnmanagedProvider(savedProvider);
+    setMaintenanceIncluded(savedMaintenanceIncluded);
+  }, [savedHostingType, savedProvider, savedMaintenanceIncluded]);
 
   useEffect(() => {
     if (addState.ok) setQuery("");
@@ -120,7 +151,21 @@ export function AdminOrgManageForm({
         </div>
       </div>
 
-      <form action={detailsAction} className="space-y-4">
+      <form
+        key={[
+          organisation.name,
+          organisation.description ?? "",
+          organisation.website_url ?? "",
+          organisation.hosting_url ?? "",
+          savedHostingType,
+          organisation.unmanaged_provider ?? "",
+          String(savedMaintenanceIncluded),
+          String(organisation.maintenance_included_amount_pence ?? ""),
+          organisation.maintenance_included_interval ?? "",
+        ].join("|")}
+        action={detailsAction}
+        className="space-y-4"
+      >
         <input type="hidden" name="organisationId" value={organisation.id} />
         <label className="block">
           <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
@@ -280,6 +325,74 @@ export function AdminOrgManageForm({
             </div>
           ) : null}
         </fieldset>
+
+        <fieldset className="space-y-3">
+          <legend className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            Maintenance plan
+          </legend>
+          <p className="text-sm text-muted">
+            Mark a paid maintenance plan as already included (for example
+            bundled in a contract). This is not free and does not create a
+            Stripe subscription — clients will see that they already have
+            coverage.
+          </p>
+          <label className="inline-flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="maintenanceIncluded"
+              value="1"
+              checked={maintenanceIncluded}
+              onChange={(event) => setMaintenanceIncluded(event.target.checked)}
+            />
+            Maintenance already included
+          </label>
+
+          {maintenanceIncluded ? (
+            <div className="grid gap-3 border border-line bg-background px-4 py-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+                  Plan amount (£)
+                </span>
+                <input
+                  name="maintenanceIncludedAmount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  defaultValue={
+                    organisation.maintenance_included_amount_pence
+                      ? (organisation.maintenance_included_amount_pence / 100).toFixed(2)
+                      : ""
+                  }
+                  placeholder="0.00"
+                  className="mt-2 w-full border border-line bg-surface px-4 py-3 text-ink outline-none focus:border-accent"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] uppercase tracking-[0.16em] text-faint">
+                  Interval
+                </span>
+                <select
+                  name="maintenanceIncludedInterval"
+                  defaultValue={
+                    organisation.maintenance_included_interval === "year"
+                      ? "year"
+                      : "month"
+                  }
+                  className="mt-2 w-full border border-line bg-surface px-4 py-3 text-ink outline-none focus:border-accent"
+                >
+                  <option value="month">Monthly</option>
+                  <option value="year">Yearly</option>
+                </select>
+              </label>
+              <p className="text-sm text-muted sm:col-span-2">
+                Shown on the client dashboard as a real plan value, labelled
+                already included.
+              </p>
+            </div>
+          ) : null}
+        </fieldset>
+
         <div className="space-y-3">
           <Feedback state={detailsState} />
           <button

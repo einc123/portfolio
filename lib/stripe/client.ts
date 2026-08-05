@@ -34,25 +34,6 @@ export async function getStripe(): Promise<Stripe> {
   return stripe;
 }
 
-export async function getStripePublishableKey(): Promise<string> {
-  const key = await getRuntimeEnv("STRIPE_PUBLISHABLE_KEY");
-  if (!key) {
-    throw new Error("Missing STRIPE_PUBLISHABLE_KEY");
-  }
-  const isProd = process.env.NODE_ENV === "production";
-  if (!isProd && key.startsWith("pk_live_")) {
-    throw new Error(
-      "Refusing to use a live Stripe publishable key outside production.",
-    );
-  }
-  if (isProd && key.startsWith("pk_test_")) {
-    throw new Error(
-      "Refusing to use a Stripe test publishable key in production.",
-    );
-  }
-  return key;
-}
-
 export function stripeErrorMessage(error: unknown): string {
   if (error && typeof error === "object" && "message" in error) {
     const message = (error as { message?: unknown }).message;

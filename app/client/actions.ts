@@ -41,20 +41,18 @@ import {
   assignStripeCustomerToUser,
   assignStripeObjectToOrg,
   cancelOrgSubscription,
-  createCustomerSetupIntent,
+  createCustomerBillingPortalSession,
   createOrgInvoice,
   createOrgSubscription,
   createStripeCustomerForUser,
-  customerHasDefaultPaymentMethod,
   ensureStripeCustomerForUser,
   loadAssignedOrgBilling,
   pauseOrgSubscription,
   removeStripeCustomerFromUser,
   resumeOrgSubscription,
-  setCustomerDefaultPaymentMethod,
   syncBillingDetailsToStripe,
 } from "@/lib/stripe/billing";
-import { getStripePublishableKey, stripeErrorMessage } from "@/lib/stripe/client";
+import { stripeErrorMessage } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import { deleteStripeOrgAssignment } from "@/lib/stripe/store";
 import {
@@ -96,7 +94,6 @@ import {
 } from "@/lib/hosting";
 import { isAccent } from "@/lib/accent";
 import { isTheme } from "@/lib/theme";
-import { withTimeout } from "@/lib/withTimeout";
 import { getRuntimeEnv } from "@/lib/runtimeEnv";
 
 export type ActionState = {
@@ -686,80 +683,28 @@ export async function saveBillingDetails(
   return { ok: true };
 }
 
-/** Non-blocking card gate for PaymentMethodGate — times out instead of hanging the UI. */
-export async function checkDefaultPaymentMethodRequired(): Promise<{
-  required: boolean;
-}> {
-  try {
-    const session = await readSession();
-    if (!session || session.pending2fa || session.pendingOrgSelect) {
-      return { required: false };
-    }
-    const active = session.organisationId ? session : null;
-    if (!active?.organisationId) return { required: false };
-
-    const user = await findUserById(session.userId);
-    if (!user || !userHasBillingDetails(user)) return { required: false };
-
-    if (!user.stripe_customer_id) return { required: true };
-
-    const hasCard = await withTimeout(
-      customerHasDefaultPaymentMethod(user.stripe_customer_id),
-      5000,
-    );
-    return { required: !hasCard };
-  } catch {
-    return { required: false };
-  }
-}
-
-export async function createPaymentMethodSetupSession(): Promise<
-  ActionState & { clientSecret?: string; publishableKey?: string }
+export async function createStripePortalSession(): Promise<
+  ActionState & { url?: string }
 > {
   const session = await requireMemberSession();
   if (!session) return { error: "Sign in required." };
 
   const user = await findUserById(session.userId);
   if (!user || !userHasBillingDetails(user)) {
-    return { error: "Save your billing address before adding a card." };
+    return { error: "Save your billing address before managing payments." };
   }
 
   try {
     const customerId = await ensureStripeCustomerForUser(user);
-    const publishableKey = await getStripePublishableKey();
-    const setup = await createCustomerSetupIntent(customerId);
-    return {
-      ok: true,
-      clientSecret: setup.clientSecret,
-      publishableKey,
-    };
-  } catch (error) {
-    return { error: stripeErrorMessage(error) };
-  }
-}
-
-export async function confirmDefaultPaymentMethod(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState & { brand?: string | null; last4?: string | null }> {
-  const session = await requireMemberSession();
-  if (!session) return { error: "Sign in required." };
-
-  const paymentMethodId = String(formData.get("paymentMethodId") ?? "").trim();
-  if (!paymentMethodId.startsWith("pm_")) {
-    return { error: "Missing payment method." };
-  }
-
-  const user = await findUserById(session.userId);
-  if (!user) return { error: "Account not found." };
-
-  try {
-    const customerId = await ensureStripeCustomerForUser(user);
-    const card = await setCustomerDefaultPaymentMethod(
+    const origin =
+      (await getRuntimeEnv("WEBAUTHN_ORIGIN")) ||
+      process.env.WEBAUTHN_ORIGIN?.trim() ||
+      site.url;
+    const url = await createCustomerBillingPortalSession(
       customerId,
-      paymentMethodId,
+      `${origin.replace(/\/$/, "")}/client/profile`,
     );
-    return { ok: true, brand: card.brand, last4: card.last4 };
+    return { ok: true, url };
   } catch (error) {
     return { error: stripeErrorMessage(error) };
   }
@@ -903,7 +848,10 @@ export async function requestMaintenanceSupport(
   const user = await findUserById(session.userId);
   if (!user) return { error: "Account not found." };
 
-  let hasActiveMaintenance = false;
+  const organisation = await findOrganisationById(session.organisationId);
+  const maintenanceIncluded = Boolean(organisation?.maintenance_included);
+
+  let hasStripeMaintenance = false;
   let verifiedSubscriptionId: string | null = null;
 
   try {
@@ -919,7 +867,7 @@ export async function requestMaintenanceSupport(
         sub.kind === "maintenance" &&
         ["active", "trialing", "past_due"].includes(sub.status),
     );
-    hasActiveMaintenance = Boolean(activeMaintenance);
+    hasStripeMaintenance = Boolean(activeMaintenance);
     if (
       subscriptionId.startsWith("sub_") &&
       activeMaintenance?.id === subscriptionId
@@ -929,13 +877,20 @@ export async function requestMaintenanceSupport(
       verifiedSubscriptionId = activeMaintenance.id;
     }
   } catch {
-    // Still allow the request; coverage note falls back to form intent.
-    hasActiveMaintenance =
-      String(formData.get("hasActiveMaintenance") ?? "") === "1";
+    // Still allow the request; Stripe coverage falls back to form intent.
+    hasStripeMaintenance =
+      String(formData.get("coverageKind") ?? "") === "stripe";
     verifiedSubscriptionId = subscriptionId.startsWith("sub_")
       ? subscriptionId
       : null;
   }
+
+  const hasActiveMaintenance = hasStripeMaintenance || maintenanceIncluded;
+  const coverageKind = hasStripeMaintenance
+    ? "stripe"
+    : maintenanceIncluded
+      ? "included"
+      : "none";
 
   const hourlyRateLabel = formatGbpFromPence(await getHourlyRatePence());
 
@@ -948,6 +903,7 @@ export async function requestMaintenanceSupport(
       subject,
       details,
       hasActiveMaintenance,
+      coverageKind,
       hourlyRateLabel,
       subscriptionId: verifiedSubscriptionId,
     });
@@ -962,9 +918,12 @@ export async function requestMaintenanceSupport(
 
   return {
     ok: true,
-    message: hasActiveMaintenance
-      ? "Request sent. If it falls under your Maintenance Subscription Contract, it will be handled under that plan. Euan Livingstone will be in touch."
-      : `Request sent. Without a maintenance subscription, work is charged at ${hourlyRateLabel} per hour. Euan Livingstone will be in touch.`,
+    message:
+      coverageKind === "none"
+        ? `Request sent. Without a maintenance subscription, work is charged at ${hourlyRateLabel} per hour. Euan Livingstone will be in touch.`
+        : coverageKind === "included"
+          ? "Request sent. You have a maintenance plan already included for this organisation. If the work falls under that plan’s contract, it will be handled under it. Euan Livingstone will be in touch."
+          : "Request sent. If it falls under your Maintenance Subscription Contract, it will be handled under that plan. Euan Livingstone will be in touch.",
   };
 }
 
@@ -1263,6 +1222,30 @@ export async function adminUpdateOrganisation(
     otherUrl,
   });
 
+  const maintenanceIncluded =
+    String(formData.get("maintenanceIncluded") ?? "") === "1" ||
+    String(formData.get("maintenanceIncluded") ?? "") === "on";
+  const maintenanceAmountRaw = String(
+    formData.get("maintenanceIncludedAmount") ?? "",
+  ).trim();
+  const maintenanceIntervalRaw = String(
+    formData.get("maintenanceIncludedInterval") ?? "month",
+  ).trim();
+  const maintenanceIncludedInterval =
+    maintenanceIntervalRaw === "year" ? "year" : "month";
+
+  let maintenanceIncludedAmountPence: number | null = null;
+  if (maintenanceIncluded) {
+    const pounds = Number(maintenanceAmountRaw);
+    if (!Number.isFinite(pounds) || pounds <= 0) {
+      return {
+        error:
+          "Enter the maintenance plan amount (greater than £0). Included plans are not free.",
+      };
+    }
+    maintenanceIncludedAmountPence = Math.round(pounds * 100);
+  }
+
   try {
     await updateOrganisationDetails({
       organisationId,
@@ -1272,6 +1255,11 @@ export async function adminUpdateOrganisation(
       hostingType,
       unmanagedProvider,
       hostingUrl,
+      maintenanceIncluded,
+      maintenanceIncludedAmountPence,
+      maintenanceIncludedInterval: maintenanceIncluded
+        ? maintenanceIncludedInterval
+        : null,
     });
   } catch (error) {
     return {
@@ -1536,7 +1524,6 @@ export async function adminCreateOrgInvoice(
   const amountPounds = Number(formData.get("amount"));
   const currency = String(formData.get("currency") ?? "gbp").trim() || "gbp";
   const description = String(formData.get("description") ?? "").trim();
-  const daysUntilDue = Number(formData.get("daysUntilDue") ?? 14);
 
   if (!Number.isFinite(organisationId) || organisationId <= 0) {
     return { error: "Invalid organisation." };
@@ -1572,7 +1559,7 @@ export async function adminCreateOrgInvoice(
       amountPence,
       currency,
       description,
-      daysUntilDue: Number.isFinite(daysUntilDue) ? daysUntilDue : 14,
+      daysUntilDue: 30,
     });
 
     if (!invoice.hostedInvoiceUrl) {
@@ -1640,7 +1627,6 @@ export async function adminCreateOrgSubscription(
   const intervalRaw = String(formData.get("interval") ?? "month");
   const interval =
     intervalRaw === "year" || intervalRaw === "week" ? intervalRaw : "month";
-  const daysUntilDue = Number(formData.get("daysUntilDue") ?? 14);
   const kind =
     String(formData.get("kind") ?? "standard").trim() === "maintenance"
       ? "maintenance"
@@ -1687,7 +1673,7 @@ export async function adminCreateOrgSubscription(
       currency,
       description: resolvedDescription,
       interval,
-      daysUntilDue: Number.isFinite(daysUntilDue) ? daysUntilDue : 14,
+      daysUntilDue: 30,
       kind,
     });
 

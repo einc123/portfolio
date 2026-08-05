@@ -128,6 +128,14 @@ export default async function ClientAdminManageOrganisationPage({
               : null,
           hosting_url: organisation.hosting_url ?? null,
           website_url: organisation.website_url ?? null,
+          maintenance_included: Boolean(organisation.maintenance_included),
+          maintenance_included_amount_pence:
+            organisation.maintenance_included_amount_pence ?? null,
+          maintenance_included_interval:
+            organisation.maintenance_included_interval === "year" ||
+            organisation.maintenance_included_interval === "month"
+              ? organisation.maintenance_included_interval
+              : null,
           members: organisation.members,
         }}
         users={users.map((person) => ({

@@ -152,130 +152,32 @@ export async function ensureStripeCustomerForUser(user: DbUser) {
   return customer.id;
 }
 
-export async function customerHasDefaultPaymentMethod(customerId: string) {
-  const stripe = await getStripe();
-  const customer = await stripe.customers.retrieve(customerId);
-  if (customer.deleted) return false;
-
-  const defaultPm = customer.invoice_settings?.default_payment_method;
-  if (defaultPm) return true;
-
-  const cards = await stripe.paymentMethods.list({
-    customer: customerId,
-    type: "card",
-    limit: 1,
-  });
-  return cards.data.length > 0;
-}
-
-export async function getCustomerPaymentMethodSummary(customerId: string) {
-  const stripe = await getStripe();
-  const customer = await stripe.customers.retrieve(customerId);
-  if (customer.deleted) {
-    return {
-      hasPaymentMethod: false,
-      brand: null as string | null,
-      last4: null as string | null,
-      expMonth: null as number | null,
-      expYear: null as number | null,
-    };
-  }
-
-  let paymentMethodId =
-    typeof customer.invoice_settings?.default_payment_method === "string"
-      ? customer.invoice_settings.default_payment_method
-      : customer.invoice_settings?.default_payment_method?.id ?? null;
-
-  if (!paymentMethodId) {
-    const cards = await stripe.paymentMethods.list({
-      customer: customerId,
-      type: "card",
-      limit: 1,
-    });
-    paymentMethodId = cards.data[0]?.id ?? null;
-  }
-
-  if (!paymentMethodId) {
-    return {
-      hasPaymentMethod: false,
-      brand: null,
-      last4: null,
-      expMonth: null,
-      expYear: null,
-    };
-  }
-
-  const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-  return {
-    hasPaymentMethod: true,
-    brand: pm.card?.brand ?? null,
-    last4: pm.card?.last4 ?? null,
-    expMonth: pm.card?.exp_month ?? null,
-    expYear: pm.card?.exp_year ?? null,
-  };
-}
-
-export async function createCustomerSetupIntent(customerId: string) {
-  const stripe = await getStripe();
-  const intent = await stripe.setupIntents.create({
-    customer: customerId,
-    payment_method_types: ["card"],
-    usage: "off_session",
-    metadata: {
-      purpose: "portal_default_payment_method",
-    },
-  });
-  if (!intent.client_secret) {
-    throw new Error("Stripe did not return a setup client secret.");
-  }
-  return {
-    clientSecret: intent.client_secret,
-    setupIntentId: intent.id,
-  };
-}
-
-export async function setCustomerDefaultPaymentMethod(
+export async function createCustomerBillingPortalSession(
   customerId: string,
-  paymentMethodId: string,
+  returnUrl: string,
 ) {
   const stripe = await getStripe();
-  const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-  const pmCustomer =
-    typeof pm.customer === "string" ? pm.customer : pm.customer?.id;
-  if (pmCustomer !== customerId) {
-    throw new Error("That payment method does not belong to this customer.");
-  }
-
-  await stripe.customers.update(customerId, {
-    invoice_settings: {
-      default_payment_method: paymentMethodId,
-    },
+  const existing = await stripe.billingPortal.configurations.list({
+    active: true,
+    limit: 1,
   });
-
-  // Attach as default on active subscriptions so renewals use the new card.
-  const subscriptions = await stripe.subscriptions.list({
+  const configuration =
+    existing.data[0] ??
+    (await stripe.billingPortal.configurations.create({
+      business_profile: {
+        headline: "Manage your payment details and billing history.",
+      },
+      features: {
+        invoice_history: { enabled: true },
+        payment_method_update: { enabled: true },
+      },
+    }));
+  const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    status: "all",
-    limit: 100,
+    return_url: returnUrl,
+    configuration: configuration.id,
   });
-  await Promise.all(
-    subscriptions.data
-      .filter((sub) =>
-        ["active", "trialing", "past_due", "unpaid", "paused"].includes(
-          sub.status,
-        ),
-      )
-      .map((sub) =>
-        stripe.subscriptions.update(sub.id, {
-          default_payment_method: paymentMethodId,
-        }),
-      ),
-  );
-
-  return {
-    brand: pm.card?.brand ?? null,
-    last4: pm.card?.last4 ?? null,
-  };
+  return session.url;
 }
 
 export type PortalInvoice = {
@@ -630,7 +532,7 @@ export async function createOrgInvoice(input: {
   const draft = await stripe.invoices.create({
     customer: input.customerId,
     collection_method: "send_invoice",
-    days_until_due: input.daysUntilDue ?? 14,
+    days_until_due: input.daysUntilDue ?? 30,
     description,
     metadata: {
       organisation_id: String(input.organisationId),
@@ -699,7 +601,10 @@ export async function createOrgSubscription(input: {
     ],
     automatic_tax: { enabled: true },
     collection_method: "send_invoice",
-    days_until_due: input.daysUntilDue ?? 14,
+    days_until_due: input.daysUntilDue ?? 30,
+    payment_settings: {
+      save_default_payment_method: "on_subscription",
+    },
     metadata: {
       organisation_id: String(input.organisationId),
       label: description,

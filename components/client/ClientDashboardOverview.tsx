@@ -103,9 +103,27 @@ export function ClientDashboardOverview({
     : null;
 
   const activeMaintenance = subscriptions.find(isActiveMaintenance) ?? null;
+  const maintenanceIncluded = Boolean(organisation.maintenance_included);
+  const hasMaintenanceCoverage = Boolean(activeMaintenance) || maintenanceIncluded;
+  const coverageKind = activeMaintenance
+    ? "stripe"
+    : maintenanceIncluded
+      ? "included"
+      : "none";
   const periodEndLabel = activeMaintenance?.currentPeriodEnd
     ? formatDate(activeMaintenance.currentPeriodEnd)
     : null;
+  const includedAmountLabel =
+    organisation.maintenance_included_amount_pence != null &&
+    organisation.maintenance_included_amount_pence > 0
+      ? money(organisation.maintenance_included_amount_pence, "gbp")
+      : null;
+  const includedInterval =
+    organisation.maintenance_included_interval === "year"
+      ? "year"
+      : organisation.maintenance_included_interval === "month"
+        ? "month"
+        : null;
 
   return (
     <div className="mt-8 space-y-6">
@@ -188,9 +206,21 @@ export function ClientDashboardOverview({
                 </>
               )}
             </div>
+          ) : maintenanceIncluded ? (
+            <div className="mt-3">
+              <p className="text-sm leading-relaxed text-ink">
+                You have a maintenance plan for this organisation.
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                {includedAmountLabel
+                  ? `${includedAmountLabel}${includedInterval ? ` / ${includedInterval}` : ""} · `
+                  : ""}
+                Already included — not billed separately through Stripe.
+              </p>
+            </div>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              You don&apos;t have an active maintenance subscription.
+              You don&apos;t have an active maintenance plan.
             </p>
           )}
         </section>
@@ -350,7 +380,8 @@ export function ClientDashboardOverview({
       </section>
 
       <RaiseMaintenanceRequestPanel
-        hasActiveMaintenance={Boolean(activeMaintenance)}
+        hasActiveMaintenance={hasMaintenanceCoverage}
+        coverageKind={coverageKind}
         hourlyRateLabel={hourlyRateLabel}
         subscriptionId={activeMaintenance?.id ?? null}
       />

@@ -171,57 +171,86 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
           </span>
         </div>
 
-        <div className="relative z-[60] flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-6">
+        <div className="relative z-[60] flex shrink-0 items-center gap-3 sm:gap-3 md:gap-6">
           {account ? (
-            <div className="hidden items-center gap-1.5 md:flex md:gap-2">
+            <>
               <Link
-                href="/client/profile"
-                onClick={() => setOpen(false)}
-                className={`${accountChipClass(open)} max-w-[12rem] truncate`}
-                title={account.name}
-              >
-                <span className="truncate">{account.name}</span>
-              </Link>
-              <div
-                className={`box-border inline-flex h-9 min-w-0 items-center gap-1.5 border px-2.5 sm:px-3 ${
-                  open
-                    ? "border-white/25 bg-white/10 text-white"
-                    : "border-line bg-surface text-ink"
+                href={orgDashboardHref}
+                className={`group inline-flex min-h-11 min-w-11 items-center justify-center transition-opacity duration-300 md:hidden ${
+                  open ? "text-white" : "text-ink"
                 }`}
+                aria-label="Organisation dashboard"
+                title={account.organisationName}
+                onClick={() => setOpen(false)}
               >
-                <Link
-                  href={orgDashboardHref}
-                  onClick={() => setOpen(false)}
-                  className="min-w-0 max-w-[11rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:text-[12px]"
-                  title={account.organisationName}
-                >
-                  {account.organisationName}
-                </Link>
-                <Link
-                  href="/client/select-org"
-                  onClick={() => setOpen(false)}
-                  className={`inline-flex shrink-0 items-center justify-center transition-opacity hover:opacity-70 ${
-                    open ? "text-white" : "text-ink"
-                  }`}
-                  aria-label="Switch organisation"
-                  title="Switch organisation"
-                >
-                  <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
+                <span className="relative h-5 w-5 shrink-0" aria-hidden>
+                  <svg viewBox="0 0 16 16" fill="none" className="h-5 w-5">
+                    <circle
+                      cx="8"
+                      cy="5.5"
+                      r="2.25"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                    />
                     <path
-                      d="M4.5 5.5 8 2.5l3.5 3M11.5 10.5 8 13.5l-3.5-3"
+                      d="M3.5 13.25c.7-2.1 2.3-3.25 4.5-3.25s3.8 1.15 4.5 3.25"
                       stroke="currentColor"
                       strokeWidth="1.25"
                       strokeLinecap="round"
-                      strokeLinejoin="round"
                     />
                   </svg>
+                </span>
+              </Link>
+              <div className="hidden items-center gap-1.5 md:flex md:gap-2">
+                <Link
+                  href="/client/profile"
+                  onClick={() => setOpen(false)}
+                  className={`${accountChipClass(open)} max-w-[12rem] truncate`}
+                  title={account.name}
+                >
+                  <span className="truncate">{account.name}</span>
                 </Link>
+                <div
+                  className={`box-border inline-flex h-9 min-w-0 items-center gap-1.5 border px-2.5 sm:px-3 ${
+                    open
+                      ? "border-white/25 bg-white/10 text-white"
+                      : "border-line bg-surface text-ink"
+                  }`}
+                >
+                  <Link
+                    href={orgDashboardHref}
+                    onClick={() => setOpen(false)}
+                    className="min-w-0 max-w-[11rem] truncate text-[11px] font-medium leading-none tracking-wide transition-opacity hover:opacity-70 sm:text-[12px]"
+                    title={account.organisationName}
+                  >
+                    {account.organisationName}
+                  </Link>
+                  <Link
+                    href="/client/select-org"
+                    onClick={() => setOpen(false)}
+                    className={`inline-flex shrink-0 items-center justify-center transition-opacity hover:opacity-70 ${
+                      open ? "text-white" : "text-ink"
+                    }`}
+                    aria-label="Switch organisation"
+                    title="Switch organisation"
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
+                      <path
+                        d="M4.5 5.5 8 2.5l3.5 3M11.5 10.5 8 13.5l-3.5-3"
+                        stroke="currentColor"
+                        strokeWidth="1.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Link>
+                </div>
               </div>
-            </div>
+            </>
           ) : (
             <Link
               href="/client/login"
-              className={`group inline-flex min-h-11 items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-opacity duration-300 sm:text-[13px] ${
+              className={`group inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-opacity duration-300 sm:min-w-0 sm:justify-start sm:text-[13px] ${
                 open ? "text-white" : "text-ink"
               }`}
               aria-label="Client login"
@@ -231,8 +260,8 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
               <span className="hidden transition-opacity group-hover:opacity-70 sm:inline">
                 Client login
               </span>
-              <span className="relative h-4 w-4 shrink-0" aria-hidden>
-                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
+              <span className="relative h-5 w-5 shrink-0 sm:h-4 sm:w-4" aria-hidden>
+                <svg viewBox="0 0 16 16" fill="none" className="h-5 w-5 sm:h-4 sm:w-4">
                   <circle
                     cx="8"
                     cy="5.5"
@@ -253,7 +282,7 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
           <ThemeToggle inverted={open} />
           <button
             type="button"
-            className={`group inline-flex min-h-11 items-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-colors duration-300 sm:gap-3 sm:text-[13px] ${
+            className={`group inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[12px] uppercase tracking-[0.14em] transition-colors duration-300 sm:min-w-0 sm:justify-start sm:gap-3 sm:text-[13px] ${
               open ? "text-white" : "text-ink"
             }`}
             aria-expanded={open}
@@ -264,11 +293,11 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
             <span className="hidden transition-opacity group-hover:opacity-70 min-[380px]:inline">
               {open ? "Close" : "Menu"}
             </span>
-            <span className="relative h-4 w-4 shrink-0" aria-hidden>
+            <span className="relative h-5 w-5 shrink-0 sm:h-4 sm:w-4" aria-hidden>
               <svg
                 viewBox="0 0 16 16"
                 fill="none"
-                className={`absolute inset-0 h-4 w-4 transition-all duration-300 ${
+                className={`absolute inset-0 h-5 w-5 transition-all duration-300 sm:h-4 sm:w-4 ${
                   open ? "scale-75 opacity-0" : "scale-100 opacity-100"
                 }`}
               >
@@ -282,7 +311,7 @@ export function Header({ account = null }: { account?: HeaderAccount | null }) {
               <svg
                 viewBox="0 0 16 16"
                 fill="none"
-                className={`absolute inset-0 h-4 w-4 transition-all duration-300 ${
+                className={`absolute inset-0 h-5 w-5 transition-all duration-300 sm:h-4 sm:w-4 ${
                   open ? "scale-100 opacity-100" : "scale-75 opacity-0"
                 }`}
               >

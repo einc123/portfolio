@@ -1,6 +1,5 @@
 import { BillingRequiredModal } from "@/components/client/BillingRequiredModal";
 import { ForcePasswordResetModal } from "@/components/client/ForcePasswordResetModal";
-import { PaymentMethodGate } from "@/components/client/PaymentMethodGate";
 import {
   readSession,
   requireOrganisationMembership,
@@ -12,46 +11,38 @@ export default async function ClientLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let forcePasswordModal: React.ReactNode = null;
-  let billingModal: React.ReactNode = null;
-  let paymentMethodGate = false;
+  let showForcePasswordModal = false;
+  let billingDefaults:
+    | React.ComponentProps<typeof BillingRequiredModal>["defaults"]
+    | null = null;
 
   try {
     const session = await readSession();
     if (session && !session.pending2fa) {
       const user = await findUserById(session.userId);
       if (user?.must_reset_password) {
-        forcePasswordModal = <ForcePasswordResetModal />;
+        showForcePasswordModal = true;
       } else {
         const active = await requireOrganisationMembership(session);
         if (active && user) {
           if (!userHasBillingDetails(user)) {
-            billingModal = (
-              <BillingRequiredModal
-                defaults={{
-                  billingName:
-                    user.billing_name?.trim() || user.full_name?.trim() || "",
-                  line1: user.billing_line1?.trim() || "",
-                  line2: user.billing_line2?.trim() || "",
-                  city: user.billing_city?.trim() || "",
-                  postcode: user.billing_postcode?.trim() || "",
-                  country: user.billing_country?.trim() || "United Kingdom",
-                  phone: user.billing_phone?.trim() || "",
-                }}
-              />
-            );
-          } else {
-            // Stripe is checked client-side so a hung Stripe call cannot
-            // block every /client page after org select.
-            paymentMethodGate = true;
+            billingDefaults = {
+              billingName:
+                user.billing_name?.trim() || user.full_name?.trim() || "",
+              line1: user.billing_line1?.trim() || "",
+              line2: user.billing_line2?.trim() || "",
+              city: user.billing_city?.trim() || "",
+              postcode: user.billing_postcode?.trim() || "",
+              country: user.billing_country?.trim() || "United Kingdom",
+              phone: user.billing_phone?.trim() || "",
+            };
           }
         }
       }
     }
   } catch {
-    forcePasswordModal = null;
-    billingModal = null;
-    paymentMethodGate = false;
+    showForcePasswordModal = false;
+    billingDefaults = null;
   }
 
   return (
@@ -59,9 +50,10 @@ export default async function ClientLayout({
       <div className="page-pad mx-auto w-full max-w-5xl pb-16 pt-6 sm:pt-8">
         {children}
       </div>
-      {forcePasswordModal}
-      {billingModal}
-      {paymentMethodGate ? <PaymentMethodGate /> : null}
+      {showForcePasswordModal ? <ForcePasswordResetModal /> : null}
+      {billingDefaults ? (
+        <BillingRequiredModal defaults={billingDefaults} />
+      ) : null}
     </div>
   );
 }

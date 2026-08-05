@@ -63,6 +63,14 @@ export default async function ClientAdminOrganisationsPage() {
               : null,
           hosting_url: org.hosting_url ?? null,
           website_url: org.website_url ?? null,
+          maintenance_included: Boolean(org.maintenance_included),
+          maintenance_included_amount_pence:
+            org.maintenance_included_amount_pence ?? null,
+          maintenance_included_interval:
+            org.maintenance_included_interval === "year" ||
+            org.maintenance_included_interval === "month"
+              ? org.maintenance_included_interval
+              : null,
           members: org.members,
           hasCaseStudy: withCaseStudy.has(org.id),
         }))}

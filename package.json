@@ -23,8 +23,6 @@
     "@opennextjs/cloudflare": "^1.20.2",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
-    "@stripe/react-stripe-js": "^6.8.0",
-    "@stripe/stripe-js": "^9.12.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "jose": "^6.2.8",
